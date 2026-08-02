@@ -94,6 +94,13 @@ subscription-lifecycle-supervisor/
       App.vue
       App.test.js
       main.js
+    domain/
+      subscriptions/
+        constants.js
+        index.js
+        normalization.js
+        subscription.test.js
+        validation.js
 ```
 
 Esta secao deve acompanhar apenas a estrutura publica real do projeto. Ela sera
