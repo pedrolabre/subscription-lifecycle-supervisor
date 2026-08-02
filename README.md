@@ -61,9 +61,20 @@ A implementacao sera guiada pelo plano interno do projeto e deve usar:
 
 ## Como Executar Localmente
 
-Ainda nao ha aplicacao executavel neste repositorio. Os comandos de instalacao,
-desenvolvimento, testes e build serao documentados aqui quando a base publica
-do app for criada.
+Requisitos:
+
+- Node.js 20.19 ou superior.
+- npm.
+
+Comandos principais:
+
+```bash
+npm install
+npm run dev
+npm run build
+npm run test
+npm run lint
+```
 
 ## Estrutura do Projeto
 
@@ -71,7 +82,18 @@ Estrutura publica atual:
 
 ```text
 subscription-lifecycle-supervisor/
+  .gitignore
   README.md
+  eslint.config.js
+  index.html
+  package.json
+  package-lock.json
+  vite.config.js
+  src/
+    app/
+      App.vue
+      App.test.js
+      main.js
 ```
 
 Esta secao deve acompanhar apenas a estrutura publica real do projeto. Ela sera
