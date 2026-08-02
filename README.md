@@ -95,6 +95,13 @@ subscription-lifecycle-supervisor/
       App.test.js
       main.js
     domain/
+      services/
+        catalog.js
+        constants.js
+        index.js
+        lookup.js
+        normalization.js
+        service-catalog.test.js
       subscriptions/
         constants.js
         index.js
