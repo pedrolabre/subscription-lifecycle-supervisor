@@ -2,7 +2,7 @@ import {
   BILLING_CYCLES,
   SUBSCRIPTION_STATUS,
   SUBSCRIPTION_TYPES,
-} from '../../domain/subscriptions/index.js';
+} from '../../domain/subscriptions/constants.js';
 
 const BILLABLE_STATUSES = Object.freeze([
   SUBSCRIPTION_STATUS.ACTIVE,

@@ -113,6 +113,8 @@ subscription-lifecycle-supervisor/
         constants.js
         index.js
         normalization.js
+        summary.js
+        summary.test.js
         subscription.test.js
         validation.js
 ```

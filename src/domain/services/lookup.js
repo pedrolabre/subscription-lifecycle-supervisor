@@ -1,4 +1,7 @@
-import { BILLING_CYCLES, BILLING_CYCLE_VALUES } from '../subscriptions/index.js';
+import {
+  BILLING_CYCLES,
+  BILLING_CYCLE_VALUES,
+} from '../subscriptions/constants.js';
 import { SERVICE_CATALOG } from './catalog.js';
 import {
   normalizeServiceCategory,
