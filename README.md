@@ -94,6 +94,13 @@ subscription-lifecycle-supervisor/
       App.vue
       App.test.js
       main.js
+    core/
+      dates/
+        dates.test.js
+        index.js
+      money/
+        index.js
+        money.test.js
     domain/
       services/
         catalog.js
