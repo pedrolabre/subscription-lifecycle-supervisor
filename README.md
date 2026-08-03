@@ -122,6 +122,10 @@ subscription-lifecycle-supervisor/
         SubscriptionCard.vue
         SubscriptionCard.test.js
         index.js
+      subscription-form/
+        NewSubscriptionForm.vue
+        NewSubscriptionForm.test.js
+        index.js
     infrastructure/
       db/
         database.js

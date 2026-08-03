@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import {
   SUBSCRIPTIONS_STORE_STATUS,
   useSubscriptionsStore,
@@ -12,9 +12,13 @@ import {
   SummaryMetric,
 } from '../shared/components/index.js';
 import { SubscriptionCard } from '../features/subscription-card/index.js';
+import { NewSubscriptionForm } from '../features/subscription-form/index.js';
 
 const productName = 'Subscription Lifecycle Supervisor';
 const subscriptionsStore = useSubscriptionsStore();
+const isSubscriptionFormOpen = ref(false);
+const isCreatingSubscription = ref(false);
+const subscriptionCreationError = ref(null);
 
 const listColumns = ['Servico', 'Valor', 'Data'];
 
@@ -39,10 +43,13 @@ const isLoadingState = computed(() =>
   ].includes(subscriptionsStore.status),
 );
 
+const hasLoadError = computed(() => Boolean(subscriptionsStore.loadError));
+
 const isErrorState = computed(
   () =>
-    subscriptionsStore.status === SUBSCRIPTIONS_STORE_STATUS.ERROR ||
-    (subscriptionsStore.hasError && !subscriptionsStore.hasSubscriptions),
+    hasLoadError.value &&
+    (subscriptionsStore.status === SUBSCRIPTIONS_STORE_STATUS.ERROR ||
+      !subscriptionsStore.hasSubscriptions),
 );
 
 const isEmptyState = computed(
@@ -161,6 +168,35 @@ function retrySubscriptionsLoad() {
   return subscriptionsStore.reload().catch(() => undefined);
 }
 
+function openSubscriptionForm() {
+  isSubscriptionFormOpen.value = true;
+  clearSubscriptionCreationError();
+}
+
+function closeSubscriptionForm() {
+  isSubscriptionFormOpen.value = false;
+  clearSubscriptionCreationError();
+}
+
+function clearSubscriptionCreationError() {
+  subscriptionCreationError.value = null;
+}
+
+async function createSubscription(payload) {
+  isCreatingSubscription.value = true;
+  clearSubscriptionCreationError();
+
+  try {
+    await subscriptionsStore.create(payload);
+    closeSubscriptionForm();
+  } catch (cause) {
+    subscriptionCreationError.value =
+      subscriptionsStore.mutationError ?? normalizeCreationError(cause);
+  } finally {
+    isCreatingSubscription.value = false;
+  }
+}
+
 function getSubscriptionKey(subscription, index) {
   return (
     subscription.id ??
@@ -188,6 +224,17 @@ function normalizeSubscriptionName(subscription) {
   const name = subscription?.serviceName ?? subscription?.service?.name;
 
   return typeof name === 'string' && name.trim() ? name.trim() : '';
+}
+
+function normalizeCreationError(cause) {
+  if (cause && typeof cause === 'object') {
+    return cause;
+  }
+
+  return {
+    message: 'Nao foi possivel salvar a assinatura local.',
+    details: {},
+  };
 }
 </script>
 
@@ -218,8 +265,13 @@ function normalizeSubscriptionName(subscription) {
         </StatusBadge>
         <BaseButton
           class="app-primary-action"
+          data-test="open-subscription-form"
           type="button"
           variant="primary"
+          aria-controls="new-subscription-form"
+          :aria-expanded="isSubscriptionFormOpen"
+          :disabled="isLoadingState || isCreatingSubscription"
+          @click="openSubscriptionForm"
         >
           Nova assinatura
         </BaseButton>
@@ -272,6 +324,15 @@ function normalizeSubscriptionName(subscription) {
           </div>
         </div>
       </section>
+
+      <NewSubscriptionForm
+        v-if="isSubscriptionFormOpen"
+        :creation-error="subscriptionCreationError"
+        :is-submitting="isCreatingSubscription"
+        @cancel="closeSubscriptionForm"
+        @change="clearSubscriptionCreationError"
+        @submit="createSubscription"
+      />
 
       <section
         class="app-list-region"

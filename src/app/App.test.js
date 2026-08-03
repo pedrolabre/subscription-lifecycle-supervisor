@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { reactive } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.vue';
@@ -191,6 +191,125 @@ describe('App', () => {
     expect(wrapper.get('[role="list"]').text()).toContain('Ativa');
     expect(wrapper.find('.subscription-card').exists()).toBe(true);
   });
+
+  it('opens and cancels the inline new subscription form', async () => {
+    const wrapper = mountApp(
+      createStore({
+        isEmpty: true,
+        isLoaded: true,
+        status: storeStatus.EMPTY,
+      }),
+    );
+
+    expect(wrapper.find('#new-subscription-form').exists()).toBe(false);
+
+    await wrapper.get('[data-test="open-subscription-form"]').trigger('click');
+
+    expect(wrapper.get('#new-subscription-title').text()).toBe(
+      'Nova assinatura',
+    );
+    expect(wrapper.find('#new-subscription-form').exists()).toBe(true);
+
+    await wrapper.get('[data-test="cancel-subscription-form"]').trigger('click');
+
+    expect(wrapper.find('#new-subscription-form').exists()).toBe(false);
+  });
+
+  it('creates a paid subscription through the store and refreshes the loaded view', async () => {
+    const store = createStore({
+      isEmpty: true,
+      isLoaded: true,
+      status: storeStatus.EMPTY,
+    });
+    store.create = vi.fn(async (payload) => {
+      const created = createSubscription({
+        ...payload,
+        id: 'sub_created',
+      });
+
+      store.activeCount = 1;
+      store.hasSubscriptions = true;
+      store.isEmpty = false;
+      store.monthlyTotal = 29.9;
+      store.status = storeStatus.LOADED;
+      store.subscriptions = [created];
+      store.summary = {
+        items: [created],
+      };
+      store.yearlyProjection = 358.8;
+
+      return created;
+    });
+    const wrapper = mountApp(store);
+
+    await wrapper.get('[data-test="open-subscription-form"]').trigger('click');
+    await wrapper.get('[data-test="service-name"]').setValue('Spotify Premium');
+    await wrapper.get('[data-test="start-date"]').setValue('2026-08-01');
+    await wrapper.get('[data-test="price"]').setValue('29,90');
+    await wrapper.get('[data-test="renewal-date"]').setValue('2026-09-01');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(store.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        billingCycle: 'monthly',
+        price: 29.9,
+        renewalDate: '2026-09-01',
+        serviceName: 'Spotify Premium',
+        startDate: '2026-08-01',
+        status: 'active',
+        type: 'paid',
+      }),
+    );
+    expect(wrapper.find('#new-subscription-form').exists()).toBe(false);
+    expect(wrapper.get('.summary-grid').text()).toContain('29,90');
+    expect(wrapper.get('[role="list"]').text()).toContain('Spotify Premium');
+    expect(wrapper.get('[role="list"]').text()).toContain('29,90');
+  });
+
+  it('keeps the form open with creation errors when the store rejects', async () => {
+    const store = createStore({
+      isEmpty: true,
+      isLoaded: true,
+      status: storeStatus.EMPTY,
+    });
+    store.create = vi.fn(async () => {
+      const cause = Object.assign(new Error('Assinatura local invalida.'), {
+        details: {
+          errors: [
+            {
+              field: 'serviceName',
+              message: 'Informe o nome do servico.',
+            },
+          ],
+        },
+      });
+
+      store.mutationError = cause;
+      throw cause;
+    });
+    const wrapper = mountApp(store);
+
+    await wrapper.get('[data-test="open-subscription-form"]').trigger('click');
+    await wrapper.get('[data-test="service-name"]').setValue('Spotify Premium');
+    await wrapper.get('[data-test="start-date"]').setValue('2026-08-01');
+    await wrapper.get('[data-test="price"]').setValue('29,90');
+    await wrapper.get('[data-test="renewal-date"]').setValue('2026-09-01');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(store.create).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('#new-subscription-form').exists()).toBe(true);
+    expect(wrapper.get('#new-subscription-form').text()).toContain(
+      'Assinatura local invalida.',
+    );
+    expect(wrapper.get('#new-subscription-form').text()).toContain(
+      'Informe o nome do servico.',
+    );
+    expect(wrapper.find('[role="alert"]').text()).not.toContain(
+      'Nao foi possivel carregar as assinaturas',
+    );
+  });
 });
 
 function mountApp(store) {
@@ -206,6 +325,7 @@ function createStore(overrides = {}) {
     activeCount: 0,
     archivedCount: 0,
     endedCount: 0,
+    create: vi.fn().mockResolvedValue(null),
     hasError: false,
     hasSubscriptions: false,
     isEmpty: false,
@@ -214,6 +334,7 @@ function createStore(overrides = {}) {
     load: vi.fn().mockResolvedValue([]),
     loadError: null,
     monthlyTotal: 0,
+    mutationError: null,
     reload: vi.fn().mockResolvedValue([]),
     status: storeStatus.IDLE,
     subscriptions: [],
