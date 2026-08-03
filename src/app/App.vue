@@ -4,6 +4,12 @@ import {
   SUBSCRIPTIONS_STORE_STATUS,
   useSubscriptionsStore,
 } from '../stores/subscriptions/index.js';
+import {
+  BaseButton,
+  StatePanel,
+  StatusBadge,
+  SummaryMetric,
+} from '../shared/components/index.js';
 
 const productName = 'Subscription Lifecycle Supervisor';
 const subscriptionsStore = useSubscriptionsStore();
@@ -41,6 +47,13 @@ const subscriptionStatusLabels = {
   trial: 'Trial',
   ended: 'Encerrada',
   archived: 'Arquivada',
+};
+
+const subscriptionStatusTones = {
+  active: 'active',
+  trial: 'trial',
+  ended: 'ended',
+  archived: 'archived',
 };
 
 const storeStatusLabel = computed(
@@ -89,6 +102,7 @@ const subscriptionRows = computed(() =>
     statusLabel:
       subscriptionStatusLabels[subscription.status] ??
       normalizeText(subscription.status, 'Status local'),
+    statusTone: subscriptionStatusTones[subscription.status] ?? 'info',
   })),
 );
 
@@ -163,13 +177,16 @@ function hasText(value) {
         class="app-header-actions"
         aria-label="Acao principal"
       >
-        <span class="app-local-badge">{{ storeStatusLabel }}</span>
-        <button
+        <StatusBadge tone="info">
+          {{ storeStatusLabel }}
+        </StatusBadge>
+        <BaseButton
           class="app-primary-action"
           type="button"
+          variant="primary"
         >
           Nova assinatura
-        </button>
+        </BaseButton>
       </div>
     </header>
 
@@ -191,15 +208,13 @@ function hasText(value) {
         </div>
 
         <dl class="summary-grid">
-          <div
+          <SummaryMetric
             v-for="item in summaryItems"
             :key="item.label"
-            class="summary-item"
-          >
-            <dt>{{ item.label }}</dt>
-            <dd>{{ item.value }}</dd>
-            <span>{{ item.detail }}</span>
-          </div>
+            :detail="item.detail"
+            :label="item.label"
+            :value="item.value"
+          />
         </dl>
       </section>
 
@@ -248,39 +263,26 @@ function hasText(value) {
             </div>
           </div>
 
-          <div
+          <StatePanel
             v-else-if="isErrorState"
-            class="state-panel state-panel--error"
+            :action-label="
+              subscriptionsStore.canRetry ? 'Tentar novamente' : ''
+            "
+            :description="errorMessage"
+            eyebrow="Leitura local"
             role="alert"
-          >
-            <p class="state-eyebrow">
-              Leitura local
-            </p>
-            <h3>Nao foi possivel carregar as assinaturas</h3>
-            <p>{{ errorMessage }}</p>
-            <button
-              v-if="subscriptionsStore.canRetry"
-              class="state-action"
-              type="button"
-              @click="retrySubscriptionsLoad"
-            >
-              Tentar novamente
-            </button>
-          </div>
+            title="Nao foi possivel carregar as assinaturas"
+            tone="error"
+            @action="retrySubscriptionsLoad"
+          />
 
-          <div
+          <StatePanel
             v-else-if="isEmptyState"
-            class="state-panel state-panel--empty"
-          >
-            <p class="state-eyebrow">
-              Lista local
-            </p>
-            <h3>Nenhuma assinatura salva</h3>
-            <p>
-              Sua lista local ainda nao tem assinaturas. Os dados aparecerao
-              aqui depois do primeiro cadastro.
-            </p>
-          </div>
+            description="Sua lista local ainda nao tem assinaturas. Os dados aparecerao aqui depois do primeiro cadastro."
+            eyebrow="Lista local"
+            title="Nenhuma assinatura salva"
+            tone="empty"
+          />
 
           <div
             v-else-if="isLoadedState"
@@ -308,24 +310,20 @@ function hasText(value) {
               >
                 <span>{{ subscription.serviceName }}</span>
                 <span>{{ subscription.renewalLabel }}</span>
-                <span>{{ subscription.statusLabel }}</span>
+                <StatusBadge :tone="subscription.statusTone">
+                  {{ subscription.statusLabel }}
+                </StatusBadge>
               </div>
             </div>
           </div>
 
-          <div
+          <StatePanel
             v-else
-            class="state-panel state-panel--empty"
-          >
-            <p class="state-eyebrow">
-              Lista local
-            </p>
-            <h3>Nenhuma assinatura salva</h3>
-            <p>
-              Sua lista local ainda nao tem assinaturas. Os dados aparecerao
-              aqui depois do primeiro cadastro.
-            </p>
-          </div>
+            description="Sua lista local ainda nao tem assinaturas. Os dados aparecerao aqui depois do primeiro cadastro."
+            eyebrow="Lista local"
+            title="Nenhuma assinatura salva"
+            tone="empty"
+          />
         </div>
       </section>
     </main>
@@ -381,33 +379,6 @@ function hasText(value) {
   min-width: 0;
 }
 
-.app-local-badge {
-  display: inline-flex;
-  min-height: var(--control-height-sm);
-  align-items: center;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--status-info-border);
-  border-radius: var(--radius-pill);
-  color: var(--text-primary);
-  background: var(--status-info-surface);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-}
-
-.app-primary-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-color: var(--status-active-border);
-  color: var(--text-inverse);
-  background: var(--status-active);
-}
-
-.app-primary-action:hover:not(:disabled) {
-  border-color: var(--text-accent);
-  background: var(--text-accent);
-}
-
 h1,
 h2 {
   overflow-wrap: anywhere;
@@ -454,36 +425,13 @@ h2 {
   margin: 0;
 }
 
-.summary-item {
-  display: grid;
-  min-height: 8rem;
-  align-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-5);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--surface-base);
-}
-
-.summary-item dt,
-.summary-item span,
 .list-columns {
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
 }
 
-.summary-item dt,
 .list-columns {
   font-weight: 700;
-}
-
-.summary-item dd {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: var(--font-size-2xl);
-  font-weight: 800;
-  line-height: var(--line-tight);
-  overflow-wrap: anywhere;
 }
 
 .subscriptions-list-shell {
@@ -546,52 +494,6 @@ h2 {
   width: min(100%, 6rem);
 }
 
-.state-panel {
-  display: grid;
-  min-height: 18rem;
-  place-items: center;
-  align-content: center;
-  gap: var(--space-3);
-  padding: var(--space-7) var(--space-5);
-  text-align: center;
-}
-
-.state-panel h3 {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: var(--font-size-lg);
-  line-height: var(--line-tight);
-  letter-spacing: 0;
-}
-
-.state-panel p {
-  max-width: 34rem;
-  margin: 0;
-  color: var(--text-secondary);
-}
-
-.state-panel .state-eyebrow {
-  color: var(--text-accent);
-  font-size: var(--font-size-xs);
-  font-weight: 800;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-.state-panel--error {
-  background: var(--status-ended-surface);
-}
-
-.state-panel--error .state-eyebrow {
-  color: var(--status-ended);
-}
-
-.state-action {
-  margin-top: var(--space-2);
-  border-color: var(--status-info-border);
-  background: var(--surface-control);
-}
-
 .loaded-list {
   display: grid;
 }
@@ -603,19 +505,6 @@ h2 {
 
 .loaded-row span:first-child {
   color: var(--text-primary);
-  font-weight: 800;
-}
-
-.loaded-row span:last-child {
-  display: inline-flex;
-  width: fit-content;
-  min-height: var(--control-height-sm);
-  align-items: center;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--status-info-border);
-  border-radius: var(--radius-pill);
-  color: var(--text-primary);
-  background: var(--status-info-surface);
   font-weight: 800;
 }
 

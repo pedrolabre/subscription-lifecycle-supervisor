@@ -84,7 +84,7 @@ describe('App', () => {
     );
     expect(wrapper.text()).toContain('IndexedDB indisponivel.');
 
-    await wrapper.get('.state-action').trigger('click');
+    await wrapper.get('.state-panel__action').trigger('click');
 
     expect(reload).toHaveBeenCalledTimes(1);
   });

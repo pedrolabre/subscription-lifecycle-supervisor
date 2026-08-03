@@ -136,6 +136,13 @@ subscription-lifecycle-supervisor/
         store.js
         store.test.js
     shared/
+      components/
+        BaseButton.vue
+        StatePanel.vue
+        StatusBadge.vue
+        SummaryMetric.vue
+        index.js
+        shared-components.test.js
       styles/
         base.css
         index.css
