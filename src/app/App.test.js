@@ -89,30 +89,35 @@ describe('App', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it('renders loaded local data without final subscription cards', () => {
+  it('renders loaded local data with subscription cards', () => {
     const wrapper = mountApp(
       createStore({
         hasSubscriptions: true,
         isLoaded: true,
+        summary: {
+          items: [
+            createSubscription({
+              brandColor: '#1db954',
+              icon: '/assets/logos/spotify.svg',
+              price: 29.9,
+              renewalDate: '2026-09-01',
+              serviceName: 'Spotify Premium',
+            }),
+          ],
+        },
         status: storeStatus.LOADED,
-        subscriptions: [
-          {
-            id: 'sub_spotify',
-            renewalDate: '2026-09-01',
-            serviceName: 'Spotify Premium',
-            status: 'active',
-            trialEndDate: null,
-          },
-        ],
+        subscriptions: [createSubscription()],
       }),
     );
 
     expect(wrapper.text()).toContain('Dados carregados');
     expect(wrapper.get('[role="list"]').text()).toContain('Spotify Premium');
-    expect(wrapper.get('[role="list"]').text()).toContain(
-      'Renova em 01/09/2026',
-    );
+    expect(wrapper.get('[role="list"]').text()).toContain('29,90');
+    expect(wrapper.get('[role="list"]').text()).toContain('/ mes');
+    expect(wrapper.get('[role="list"]').text()).toContain('Renovacao');
+    expect(wrapper.get('[role="list"]').text()).toContain('01/09/2026');
     expect(wrapper.get('[role="list"]').text()).toContain('Ativa');
+    expect(wrapper.find('.subscription-card').exists()).toBe(true);
   });
 });
 
@@ -136,6 +141,26 @@ function createStore(overrides = {}) {
     reload: vi.fn().mockResolvedValue([]),
     status: storeStatus.IDLE,
     subscriptions: [],
+    summary: {
+      items: [],
+    },
     ...overrides,
   });
+}
+
+function createSubscription(overrides = {}) {
+  return {
+    billingCycle: 'monthly',
+    brandColor: '#64748b',
+    icon: null,
+    id: 'sub_spotify',
+    price: 19.9,
+    renewalDate: '2026-09-01',
+    serviceName: 'Spotify Premium',
+    startDate: '2026-01-01',
+    status: 'active',
+    trialEndDate: null,
+    type: 'paid',
+    ...overrides,
+  };
 }

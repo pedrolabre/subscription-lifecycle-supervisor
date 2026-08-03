@@ -10,6 +10,7 @@ import {
   StatusBadge,
   SummaryMetric,
 } from '../shared/components/index.js';
+import { SubscriptionCard } from '../features/subscription-card/index.js';
 
 const productName = 'Subscription Lifecycle Supervisor';
 const subscriptionsStore = useSubscriptionsStore();
@@ -32,7 +33,7 @@ const summaryItems = [
   },
 ];
 
-const listColumns = ['Servico', 'Renovacao', 'Status'];
+const listColumns = ['Servico', 'Valor', 'Data'];
 
 const storeStatusLabels = {
   [SUBSCRIPTIONS_STORE_STATUS.IDLE]: 'Preparando leitura local',
@@ -40,20 +41,6 @@ const storeStatusLabels = {
   [SUBSCRIPTIONS_STORE_STATUS.EMPTY]: 'Nenhuma assinatura',
   [SUBSCRIPTIONS_STORE_STATUS.ERROR]: 'Leitura local indisponivel',
   [SUBSCRIPTIONS_STORE_STATUS.LOADED]: 'Dados carregados',
-};
-
-const subscriptionStatusLabels = {
-  active: 'Ativa',
-  trial: 'Trial',
-  ended: 'Encerrada',
-  archived: 'Arquivada',
-};
-
-const subscriptionStatusTones = {
-  active: 'active',
-  trial: 'trial',
-  ended: 'ended',
-  archived: 'archived',
 };
 
 const storeStatusLabel = computed(
@@ -94,17 +81,13 @@ const errorMessage = computed(
     'Nao foi possivel ler as assinaturas locais.',
 );
 
-const subscriptionRows = computed(() =>
-  subscriptionsStore.subscriptions.map((subscription) => ({
-    id: subscription.id ?? subscription.serviceName,
-    serviceName: normalizeText(subscription.serviceName, 'Assinatura local'),
-    renewalLabel: resolveRenewalLabel(subscription),
-    statusLabel:
-      subscriptionStatusLabels[subscription.status] ??
-      normalizeText(subscription.status, 'Status local'),
-    statusTone: subscriptionStatusTones[subscription.status] ?? 'info',
-  })),
-);
+const subscriptionCards = computed(() => {
+  const summaryItems = subscriptionsStore.summary?.items;
+
+  return Array.isArray(summaryItems) && summaryItems.length > 0
+    ? summaryItems
+    : subscriptionsStore.subscriptions;
+});
 
 onMounted(() => {
   if (!subscriptionsStore.isLoaded && !subscriptionsStore.isLoading) {
@@ -120,38 +103,11 @@ function retrySubscriptionsLoad() {
   return subscriptionsStore.reload().catch(() => undefined);
 }
 
-function resolveRenewalLabel(subscription) {
-  if (hasText(subscription.trialEndDate)) {
-    return `Trial ate ${formatLocalDate(subscription.trialEndDate)}`;
-  }
-
-  if (hasText(subscription.renewalDate)) {
-    return `Renova em ${formatLocalDate(subscription.renewalDate)}`;
-  }
-
-  return 'Sem data local';
-}
-
-function formatLocalDate(value) {
-  const date = new Date(`${value}T00:00:00`);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date);
-}
-
-function normalizeText(value, fallback) {
-  return hasText(value) ? value.trim() : fallback;
-}
-
-function hasText(value) {
-  return typeof value === 'string' && value.trim().length > 0;
+function getSubscriptionKey(subscription, index) {
+  return (
+    subscription.id ??
+    `${subscription.serviceName ?? 'subscription'}-${index}`
+  );
 }
 </script>
 
@@ -288,32 +244,16 @@ function hasText(value) {
             v-else-if="isLoadedState"
             class="loaded-state"
           >
-            <div class="list-columns">
-              <span
-                v-for="column in listColumns"
-                :key="column"
-              >
-                {{ column }}
-              </span>
-            </div>
-
             <div
-              class="loaded-list"
+              class="subscription-card-grid"
               role="list"
               aria-label="Assinaturas carregadas"
             >
-              <div
-                v-for="subscription in subscriptionRows"
-                :key="subscription.id"
-                class="loaded-row"
-                role="listitem"
-              >
-                <span>{{ subscription.serviceName }}</span>
-                <span>{{ subscription.renewalLabel }}</span>
-                <StatusBadge :tone="subscription.statusTone">
-                  {{ subscription.statusLabel }}
-                </StatusBadge>
-              </div>
+              <SubscriptionCard
+                v-for="(subscription, index) in subscriptionCards"
+                :key="getSubscriptionKey(subscription, index)"
+                :subscription="subscription"
+              />
             </div>
           </div>
 
@@ -442,8 +382,7 @@ h2 {
 }
 
 .list-columns,
-.list-row-slot,
-.loaded-row {
+.list-row-slot {
   display: grid;
   grid-template-columns:
     minmax(9rem, 1.4fr) minmax(7rem, 0.85fr) minmax(6rem, 0.6fr);
@@ -457,15 +396,13 @@ h2 {
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.list-row-slot,
-.loaded-row {
+.list-row-slot {
   min-height: 4.75rem;
   padding: 0 var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.list-row-slot:last-child,
-.loaded-row:last-child {
+.list-row-slot:last-child {
   border-bottom: 0;
 }
 
@@ -494,18 +431,11 @@ h2 {
   width: min(100%, 6rem);
 }
 
-.loaded-list {
+.subscription-card-grid {
   display: grid;
-}
-
-.loaded-row {
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.loaded-row span:first-child {
-  color: var(--text-primary);
-  font-weight: 800;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16.5rem), 1fr));
+  gap: var(--space-4);
+  padding: var(--space-4);
 }
 
 @media (max-width: 700px) {
@@ -540,8 +470,7 @@ h2 {
     display: none;
   }
 
-  .list-row-slot,
-  .loaded-row {
+  .list-row-slot {
     grid-template-columns: 1fr;
     align-content: center;
   }

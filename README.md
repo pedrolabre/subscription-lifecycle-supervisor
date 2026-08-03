@@ -117,6 +117,11 @@ subscription-lifecycle-supervisor/
         summary.test.js
         subscription.test.js
         validation.js
+    features/
+      subscription-card/
+        SubscriptionCard.vue
+        SubscriptionCard.test.js
+        index.js
     infrastructure/
       db/
         database.js
