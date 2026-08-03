@@ -110,11 +110,58 @@ describe('SubscriptionCard', () => {
     expect(wrapper.classes()).toContain('subscription-card--trial-warning');
     expect(wrapper.text()).toContain('Trial perto do fim');
   });
+
+  it('emits card actions with the persisted subscription', async () => {
+    const wrapper = mountCard({
+      id: 'sub_spotify',
+      serviceName: 'Spotify Premium',
+    });
+
+    await wrapper.get('[data-test="edit-subscription"]').trigger('click');
+    await wrapper.get('[data-test="archive-subscription"]').trigger('click');
+    await wrapper.get('[data-test="end-subscription"]').trigger('click');
+
+    expect(wrapper.emitted('edit')?.[0]?.[0]).toMatchObject({
+      id: 'sub_spotify',
+      serviceName: 'Spotify Premium',
+    });
+    expect(wrapper.emitted('archive')?.[0]?.[0]).toMatchObject({
+      id: 'sub_spotify',
+    });
+    expect(wrapper.emitted('end')?.[0]?.[0]).toMatchObject({
+      id: 'sub_spotify',
+    });
+  });
+
+  it('disables unavailable or globally blocked actions', () => {
+    const archivedWrapper = mountCard({
+      status: SUBSCRIPTION_STATUS.ARCHIVED,
+    });
+    const endedWrapper = mountCard({
+      status: SUBSCRIPTION_STATUS.ENDED,
+    });
+    const blockedWrapper = mountCard({}, { actionsDisabled: true });
+
+    expect(
+      archivedWrapper.get('[data-test="archive-subscription"]').attributes(
+        'disabled',
+      ),
+    ).toBeDefined();
+    expect(
+      endedWrapper.get('[data-test="end-subscription"]').attributes('disabled'),
+    ).toBeDefined();
+    expect(
+      blockedWrapper.get('[data-test="edit-subscription"]').attributes(
+        'disabled',
+      ),
+    ).toBeDefined();
+  });
 });
 
-function mountCard(overrides = {}) {
+function mountCard(overrides = {}, props = {}) {
   return mount(SubscriptionCard, {
     props: {
+      ...props,
       referenceDate,
       subscription: createSubscription(overrides),
     },

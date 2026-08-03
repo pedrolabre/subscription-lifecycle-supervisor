@@ -267,6 +267,193 @@ describe('App', () => {
     expect(wrapper.get('[role="list"]').text()).toContain('29,90');
   });
 
+  it('edits a persisted subscription through the store', async () => {
+    const initial = createSubscription({
+      id: 'sub_spotify',
+      price: 29.9,
+      serviceName: 'Spotify Premium',
+    });
+    const store = createStore({
+      activeCount: 1,
+      hasSubscriptions: true,
+      isLoaded: true,
+      monthlyTotal: 29.9,
+      status: storeStatus.LOADED,
+      subscriptions: [initial],
+      summary: {
+        items: [initial],
+      },
+      yearlyProjection: 358.8,
+    });
+    store.update = vi.fn(async (id, payload) => {
+      const updated = createSubscription({
+        ...payload,
+        id,
+      });
+
+      store.monthlyTotal = 35.5;
+      store.subscriptions = [updated];
+      store.summary = {
+        items: [updated],
+      };
+      store.yearlyProjection = 426;
+
+      return updated;
+    });
+    const wrapper = mountApp(store);
+
+    await wrapper.get('[data-test="edit-subscription"]').trigger('click');
+
+    expect(wrapper.get('#new-subscription-title').text()).toBe(
+      'Editar assinatura',
+    );
+
+    await wrapper.get('[data-test="service-name"]').setValue('Spotify Duo');
+    await wrapper.get('[data-test="price"]').setValue('35,50');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(store.update).toHaveBeenCalledWith(
+      'sub_spotify',
+      expect.objectContaining({
+        billingCycle: 'monthly',
+        price: 35.5,
+        renewalDate: '2026-09-01',
+        serviceName: 'Spotify Duo',
+        status: 'active',
+        type: 'paid',
+      }),
+    );
+    expect(wrapper.find('#new-subscription-form').exists()).toBe(false);
+    expect(wrapper.get('.summary-grid').text()).toContain('35,50');
+    expect(wrapper.get('[role="list"]').text()).toContain('Spotify Duo');
+  });
+
+  it('archives a persisted subscription and refreshes totals from the store', async () => {
+    const initial = createSubscription({
+      id: 'sub_spotify',
+      price: 29.9,
+      serviceName: 'Spotify Premium',
+    });
+    const archived = createSubscription({
+      ...initial,
+      status: 'archived',
+    });
+    const store = createStore({
+      activeCount: 1,
+      hasSubscriptions: true,
+      isLoaded: true,
+      monthlyTotal: 29.9,
+      status: storeStatus.LOADED,
+      subscriptions: [initial],
+      summary: {
+        items: [initial],
+      },
+      yearlyProjection: 358.8,
+    });
+    store.archive = vi.fn(async () => {
+      store.activeCount = 0;
+      store.archivedCount = 1;
+      store.monthlyTotal = 0;
+      store.subscriptions = [archived];
+      store.summary = {
+        items: [archived],
+      };
+      store.yearlyProjection = 0;
+
+      return archived;
+    });
+    const wrapper = mountApp(store);
+
+    await wrapper.get('[data-test="archive-subscription"]').trigger('click');
+    await flushPromises();
+
+    expect(store.archive).toHaveBeenCalledWith('sub_spotify');
+    expect(wrapper.get('.summary-grid').text()).toContain('0,00');
+    expect(wrapper.get('.summary-grid').text()).toContain('1 arquivada');
+    expect(wrapper.get('[role="list"]').text()).toContain('Arquivada');
+  });
+
+  it('ends a persisted subscription and keeps the loaded list visible', async () => {
+    const initial = createSubscription({
+      id: 'sub_figma',
+      price: 0,
+      renewalDate: null,
+      serviceName: 'Figma Trial',
+      status: 'trial',
+      trialEndDate: '2026-08-07',
+      type: 'free',
+    });
+    const ended = createSubscription({
+      ...initial,
+      status: 'ended',
+    });
+    const store = createStore({
+      hasSubscriptions: true,
+      isLoaded: true,
+      status: storeStatus.LOADED,
+      subscriptions: [initial],
+      summary: {
+        items: [initial],
+      },
+      trialCount: 1,
+    });
+    store.end = vi.fn(async () => {
+      store.endedCount = 1;
+      store.subscriptions = [ended];
+      store.summary = {
+        items: [ended],
+      };
+      store.trialCount = 0;
+
+      return ended;
+    });
+    const wrapper = mountApp(store);
+
+    await wrapper.get('[data-test="end-subscription"]').trigger('click');
+    await flushPromises();
+
+    expect(store.end).toHaveBeenCalledWith('sub_figma');
+    expect(wrapper.get('.summary-grid').text()).toContain('Encerradas');
+    expect(wrapper.get('.summary-grid').text()).toContain('1');
+    expect(wrapper.get('[role="list"]').text()).toContain('Encerrada');
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+  });
+
+  it('shows lifecycle mutation errors without replacing the loaded state', async () => {
+    const initial = createSubscription({
+      id: 'sub_spotify',
+      serviceName: 'Spotify Premium',
+    });
+    const store = createStore({
+      hasSubscriptions: true,
+      isLoaded: true,
+      status: storeStatus.LOADED,
+      subscriptions: [initial],
+      summary: {
+        items: [initial],
+      },
+    });
+    store.archive = vi.fn(async () => {
+      const cause = Object.assign(new Error('Falha local ao arquivar.'), {
+        details: {},
+      });
+
+      store.mutationError = cause;
+      throw cause;
+    });
+    const wrapper = mountApp(store);
+
+    await wrapper.get('[data-test="archive-subscription"]').trigger('click');
+    await flushPromises();
+
+    expect(store.archive).toHaveBeenCalledWith('sub_spotify');
+    expect(wrapper.get('[role="alert"]').text()).toContain(
+      'Falha local ao arquivar.',
+    );
+    expect(wrapper.get('[role="list"]').text()).toContain('Spotify Premium');
+  });
+
   it('keeps the form open with creation errors when the store rejects', async () => {
     const store = createStore({
       isEmpty: true,
@@ -324,7 +511,9 @@ function createStore(overrides = {}) {
     error: null,
     activeCount: 0,
     archivedCount: 0,
+    archive: vi.fn().mockResolvedValue(null),
     endedCount: 0,
+    end: vi.fn().mockResolvedValue(null),
     create: vi.fn().mockResolvedValue(null),
     hasError: false,
     hasSubscriptions: false,
@@ -343,6 +532,7 @@ function createStore(overrides = {}) {
     },
     trialAlerts: [],
     trialCount: 0,
+    update: vi.fn().mockResolvedValue(null),
     yearlyProjection: 0,
     ...overrides,
   });

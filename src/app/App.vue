@@ -17,8 +17,11 @@ import { NewSubscriptionForm } from '../features/subscription-form/index.js';
 const productName = 'Subscription Lifecycle Supervisor';
 const subscriptionsStore = useSubscriptionsStore();
 const isSubscriptionFormOpen = ref(false);
-const isCreatingSubscription = ref(false);
-const subscriptionCreationError = ref(null);
+const editingSubscription = ref(null);
+const isSubmittingSubscription = ref(false);
+const isRunningLifecycleAction = ref(false);
+const subscriptionFormError = ref(null);
+const subscriptionActionError = ref(null);
 
 const listColumns = ['Servico', 'Valor', 'Data'];
 
@@ -154,6 +157,30 @@ const subscriptionCards = computed(() => {
     : subscriptionsStore.subscriptions;
 });
 
+const subscriptionFormMode = computed(() =>
+  editingSubscription.value ? 'edit' : 'create',
+);
+
+const subscriptionFormKey = computed(
+  () =>
+    `${subscriptionFormMode.value}-${
+      resolveSubscriptionId(editingSubscription.value) || 'new'
+    }`,
+);
+
+const subscriptionActionErrorMessage = computed(
+  () =>
+    subscriptionActionError.value?.message ??
+    'Nao foi possivel atualizar a assinatura local.',
+);
+
+const areCardActionsDisabled = computed(
+  () =>
+    isSubscriptionFormOpen.value ||
+    isSubmittingSubscription.value ||
+    isRunningLifecycleAction.value,
+);
+
 onMounted(() => {
   if (!subscriptionsStore.isLoaded && !subscriptionsStore.isLoading) {
     loadSubscriptions();
@@ -169,31 +196,115 @@ function retrySubscriptionsLoad() {
 }
 
 function openSubscriptionForm() {
+  editingSubscription.value = null;
   isSubscriptionFormOpen.value = true;
-  clearSubscriptionCreationError();
+  clearSubscriptionFormError();
+  clearSubscriptionActionError();
+}
+
+function openEditSubscriptionForm(subscription) {
+  if (!resolveSubscriptionId(subscription)) {
+    subscriptionActionError.value = createLocalMutationError(
+      'Assinatura local sem identificador para edicao.',
+    );
+    return;
+  }
+
+  editingSubscription.value = subscription;
+  isSubscriptionFormOpen.value = true;
+  clearSubscriptionFormError();
+  clearSubscriptionActionError();
 }
 
 function closeSubscriptionForm() {
   isSubscriptionFormOpen.value = false;
-  clearSubscriptionCreationError();
+  editingSubscription.value = null;
+  clearSubscriptionFormError();
 }
 
-function clearSubscriptionCreationError() {
-  subscriptionCreationError.value = null;
+function clearSubscriptionFormError() {
+  subscriptionFormError.value = null;
 }
 
-async function createSubscription(payload) {
-  isCreatingSubscription.value = true;
-  clearSubscriptionCreationError();
+function clearSubscriptionActionError() {
+  subscriptionActionError.value = null;
+}
+
+async function submitSubscription(payload) {
+  isSubmittingSubscription.value = true;
+  clearSubscriptionFormError();
+  clearSubscriptionActionError();
 
   try {
-    await subscriptionsStore.create(payload);
+    if (editingSubscription.value) {
+      const subscriptionId = resolveSubscriptionId(editingSubscription.value);
+
+      if (!subscriptionId) {
+        throw createLocalMutationError(
+          'Assinatura local sem identificador para edicao.',
+        );
+      }
+
+      await subscriptionsStore.update(subscriptionId, payload);
+    } else {
+      await subscriptionsStore.create(payload);
+    }
+
     closeSubscriptionForm();
   } catch (cause) {
-    subscriptionCreationError.value =
-      subscriptionsStore.mutationError ?? normalizeCreationError(cause);
+    subscriptionFormError.value =
+      subscriptionsStore.mutationError ??
+      normalizeMutationError(
+        cause,
+        'Nao foi possivel salvar a assinatura local.',
+      );
   } finally {
-    isCreatingSubscription.value = false;
+    isSubmittingSubscription.value = false;
+  }
+}
+
+async function archiveSubscription(subscription) {
+  await runLifecycleMutation(
+    subscription,
+    'archive',
+    'Nao foi possivel arquivar a assinatura local.',
+  );
+}
+
+async function endSubscription(subscription) {
+  await runLifecycleMutation(
+    subscription,
+    'end',
+    'Nao foi possivel encerrar a assinatura local.',
+  );
+}
+
+async function runLifecycleMutation(subscription, action, fallbackMessage) {
+  if (isRunningLifecycleAction.value) {
+    return;
+  }
+
+  const subscriptionId = resolveSubscriptionId(subscription);
+
+  if (!subscriptionId) {
+    subscriptionActionError.value = createLocalMutationError(
+      'Assinatura local sem identificador.',
+    );
+    return;
+  }
+
+  isRunningLifecycleAction.value = true;
+  clearSubscriptionActionError();
+  clearSubscriptionFormError();
+
+  try {
+    await subscriptionsStore[action](subscriptionId);
+  } catch (cause) {
+    subscriptionActionError.value =
+      subscriptionsStore.mutationError ??
+      normalizeMutationError(cause, fallbackMessage);
+  } finally {
+    isRunningLifecycleAction.value = false;
   }
 }
 
@@ -226,13 +337,23 @@ function normalizeSubscriptionName(subscription) {
   return typeof name === 'string' && name.trim() ? name.trim() : '';
 }
 
-function normalizeCreationError(cause) {
+function resolveSubscriptionId(subscription) {
+  const id = subscription?.id;
+
+  return typeof id === 'string' && id.trim() ? id.trim() : '';
+}
+
+function normalizeMutationError(cause, fallbackMessage) {
   if (cause && typeof cause === 'object') {
     return cause;
   }
 
+  return createLocalMutationError(fallbackMessage);
+}
+
+function createLocalMutationError(message) {
   return {
-    message: 'Nao foi possivel salvar a assinatura local.',
+    message,
     details: {},
   };
 }
@@ -270,7 +391,7 @@ function normalizeCreationError(cause) {
           variant="primary"
           aria-controls="new-subscription-form"
           :aria-expanded="isSubscriptionFormOpen"
-          :disabled="isLoadingState || isCreatingSubscription"
+          :disabled="isLoadingState || isSubmittingSubscription"
           @click="openSubscriptionForm"
         >
           Nova assinatura
@@ -327,11 +448,14 @@ function normalizeCreationError(cause) {
 
       <NewSubscriptionForm
         v-if="isSubscriptionFormOpen"
-        :creation-error="subscriptionCreationError"
-        :is-submitting="isCreatingSubscription"
+        :key="subscriptionFormKey"
+        :is-submitting="isSubmittingSubscription"
+        :mode="subscriptionFormMode"
+        :submission-error="subscriptionFormError"
+        :subscription="editingSubscription"
         @cancel="closeSubscriptionForm"
-        @change="clearSubscriptionCreationError"
-        @submit="createSubscription"
+        @change="clearSubscriptionFormError"
+        @submit="submitSubscription"
       />
 
       <section
@@ -346,6 +470,14 @@ function normalizeCreationError(cause) {
             Lista local
           </h2>
         </div>
+
+        <p
+          v-if="subscriptionActionError"
+          class="subscription-action-error"
+          role="alert"
+        >
+          {{ subscriptionActionErrorMessage }}
+        </p>
 
         <div
           class="subscriptions-list-shell"
@@ -412,7 +544,11 @@ function normalizeCreationError(cause) {
               <SubscriptionCard
                 v-for="(subscription, index) in subscriptionCards"
                 :key="getSubscriptionKey(subscription, index)"
+                :actions-disabled="areCardActionsDisabled"
                 :subscription="subscription"
+                @archive="archiveSubscription"
+                @edit="openEditSubscriptionForm"
+                @end="endSubscription"
               />
             </div>
           </div>
@@ -555,6 +691,17 @@ h2 {
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
+}
+
+.subscription-action-error {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--status-ended-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  background: var(--status-ended-surface);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
 }
 
 .list-columns {

@@ -8,9 +8,13 @@ import {
   SUBSCRIPTION_STATUS,
   SUBSCRIPTION_TYPES,
 } from '../../domain/subscriptions/index.js';
-import { StatusBadge } from '../../shared/components/index.js';
+import { BaseButton, StatusBadge } from '../../shared/components/index.js';
 
 const props = defineProps({
+  actionsDisabled: {
+    type: Boolean,
+    default: false,
+  },
   referenceDate: {
     type: [Date, String],
     default: () => new Date(),
@@ -20,6 +24,8 @@ const props = defineProps({
     required: true,
   },
 });
+
+const emit = defineEmits(['archive', 'edit', 'end']);
 
 const logoFailed = ref(false);
 
@@ -151,9 +157,37 @@ const isPaidSubscription = computed(
   () => props.subscription.type === SUBSCRIPTION_TYPES.PAID,
 );
 
+const subscriptionId = computed(() => normalizeText(props.subscription.id, ''));
+
+const hasSubscriptionId = computed(() => Boolean(subscriptionId.value));
+
+const canArchive = computed(
+  () =>
+    hasSubscriptionId.value &&
+    props.subscription.status !== SUBSCRIPTION_STATUS.ARCHIVED,
+);
+
+const canEnd = computed(
+  () =>
+    hasSubscriptionId.value &&
+    props.subscription.status !== SUBSCRIPTION_STATUS.ENDED,
+);
+
 watch(logoUrl, () => {
   logoFailed.value = false;
 });
+
+function emitEdit() {
+  emit('edit', props.subscription);
+}
+
+function emitArchive() {
+  emit('archive', props.subscription);
+}
+
+function emitEnd() {
+  emit('end', props.subscription);
+}
 
 function handleLogoError() {
   logoFailed.value = true;
@@ -288,6 +322,45 @@ function normalizeBrandColor(value) {
         {{ relevantDate.detail }}
       </span>
     </footer>
+
+    <div
+      class="subscription-card__actions"
+      aria-label="Acoes da assinatura"
+    >
+      <BaseButton
+        class="subscription-card__action"
+        data-test="edit-subscription"
+        type="button"
+        variant="secondary"
+        :aria-label="`Editar ${displayName}`"
+        :disabled="actionsDisabled || !hasSubscriptionId"
+        @click="emitEdit"
+      >
+        Editar
+      </BaseButton>
+      <BaseButton
+        class="subscription-card__action"
+        data-test="archive-subscription"
+        type="button"
+        variant="secondary"
+        :aria-label="`Arquivar ${displayName}`"
+        :disabled="actionsDisabled || !canArchive"
+        @click="emitArchive"
+      >
+        Arquivar
+      </BaseButton>
+      <BaseButton
+        class="subscription-card__action"
+        data-test="end-subscription"
+        type="button"
+        variant="secondary"
+        :aria-label="`Encerrar ${displayName}`"
+        :disabled="actionsDisabled || !canEnd"
+        @click="emitEnd"
+      >
+        Encerrar
+      </BaseButton>
+    </div>
   </article>
 </template>
 
@@ -456,6 +529,17 @@ function normalizeBrandColor(value) {
   grid-column: 1 / -1;
   color: var(--text-secondary);
   text-transform: none;
+}
+
+.subscription-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-self: end;
+}
+
+.subscription-card__action {
+  flex: 1 1 5.75rem;
 }
 
 @media (max-width: 520px) {

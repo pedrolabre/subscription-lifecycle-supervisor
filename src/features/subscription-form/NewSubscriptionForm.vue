@@ -16,6 +16,11 @@ const ACCESS_KINDS = Object.freeze({
   TRIAL: 'trial',
 });
 
+const FORM_MODES = Object.freeze({
+  CREATE: 'create',
+  EDIT: 'edit',
+});
+
 const accessKindOptions = Object.freeze([
   {
     value: ACCESS_KINDS.PAID,
@@ -55,9 +60,22 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  mode: {
+    type: String,
+    default: 'create',
+    validator: (value) => ['create', 'edit'].includes(value),
+  },
   isSubmitting: {
     type: Boolean,
     default: false,
+  },
+  submissionError: {
+    type: Object,
+    default: null,
+  },
+  subscription: {
+    type: Object,
+    default: null,
   },
 });
 
@@ -76,6 +94,9 @@ const form = reactive({
 const localFieldErrors = ref({});
 const localFormError = ref('');
 
+const isEditing = computed(
+  () => props.mode === FORM_MODES.EDIT && isRecord(props.subscription),
+);
 const isPaidAccess = computed(() => form.accessKind === ACCESS_KINDS.PAID);
 const isTrialAccess = computed(() => form.accessKind === ACCESS_KINDS.TRIAL);
 const requiresRenewalDate = computed(
@@ -86,8 +107,12 @@ const requiresRenewalDate = computed(
     ),
 );
 
+const resolvedSubmissionError = computed(
+  () => props.submissionError ?? props.creationError,
+);
+
 const externalFieldErrors = computed(() =>
-  createFieldErrorMap(resolveCreationErrors(props.creationError)),
+  createFieldErrorMap(resolveCreationErrors(resolvedSubmissionError.value)),
 );
 
 const fieldErrors = computed(() => ({
@@ -96,7 +121,32 @@ const fieldErrors = computed(() => ({
 }));
 
 const formError = computed(
-  () => localFormError.value || normalizeErrorMessage(props.creationError),
+  () =>
+    localFormError.value || normalizeErrorMessage(resolvedSubmissionError.value),
+);
+
+const formEyebrow = computed(() =>
+  isEditing.value ? 'Edicao local' : 'Cadastro local',
+);
+
+const formTitle = computed(() =>
+  isEditing.value ? 'Editar assinatura' : 'Nova assinatura',
+);
+
+const submitButtonText = computed(() => {
+  if (props.isSubmitting) {
+    return isEditing.value ? 'Salvando edicao' : 'Salvando';
+  }
+
+  return isEditing.value ? 'Salvar edicao' : 'Salvar assinatura';
+});
+
+watch(
+  () => [props.mode, props.subscription],
+  () => {
+    resetForm();
+  },
+  { immediate: true },
 );
 
 watch(
@@ -133,10 +183,7 @@ function emitCancel() {
 
 function createSubscriptionPayload() {
   const basePayload = {
-    brandColor: null,
-    category: null,
-    icon: null,
-    serviceId: null,
+    ...createHiddenPayload(),
     serviceName: form.serviceName,
     startDate: form.startDate,
   };
@@ -155,7 +202,7 @@ function createSubscriptionPayload() {
       billingCycle: BILLING_CYCLES.NONE,
       price: 0,
       renewalDate: null,
-      status: SUBSCRIPTION_STATUS.TRIAL,
+      status: resolvePayloadStatus(),
       trialEndDate: form.trialEndDate,
       type: SUBSCRIPTION_TYPES.FREE,
     };
@@ -166,7 +213,7 @@ function createSubscriptionPayload() {
     billingCycle: form.billingCycle,
     price: form.price,
     renewalDate: requiresRenewalDate.value ? form.renewalDate : null,
-    status: SUBSCRIPTION_STATUS.ACTIVE,
+    status: resolvePayloadStatus(),
     trialEndDate: null,
     type: SUBSCRIPTION_TYPES.PAID,
   };
@@ -178,10 +225,95 @@ function createNonPaidPayload(basePayload, type) {
     billingCycle: BILLING_CYCLES.NONE,
     price: 0,
     renewalDate: null,
-    status: SUBSCRIPTION_STATUS.ACTIVE,
+    status: resolvePayloadStatus(),
     trialEndDate: null,
     type,
   };
+}
+
+function createHiddenPayload() {
+  const subscription = isEditing.value ? props.subscription : {};
+
+  return {
+    brandColor: subscription?.brandColor ?? null,
+    category: subscription?.category ?? null,
+    icon: subscription?.icon ?? null,
+    serviceId: subscription?.serviceId ?? null,
+  };
+}
+
+function resolvePayloadStatus() {
+  if (form.accessKind === ACCESS_KINDS.TRIAL) {
+    return SUBSCRIPTION_STATUS.TRIAL;
+  }
+
+  if (isEditing.value) {
+    const currentStatus = normalizeText(props.subscription?.status);
+
+    if (
+      currentStatus === SUBSCRIPTION_STATUS.ARCHIVED ||
+      currentStatus === SUBSCRIPTION_STATUS.ENDED
+    ) {
+      return currentStatus;
+    }
+  }
+
+  return SUBSCRIPTION_STATUS.ACTIVE;
+}
+
+function resetForm() {
+  const subscription = isEditing.value ? props.subscription : null;
+
+  form.accessKind = resolveAccessKind(subscription);
+  form.billingCycle = resolveBillingCycle(subscription);
+  form.price = formatEditablePrice(subscription?.price);
+  form.renewalDate = normalizeText(subscription?.renewalDate);
+  form.serviceName = normalizeText(subscription?.serviceName);
+  form.startDate = normalizeText(subscription?.startDate);
+  form.trialEndDate = normalizeText(subscription?.trialEndDate);
+  localFieldErrors.value = {};
+  localFormError.value = '';
+}
+
+function resolveAccessKind(subscription) {
+  if (!isRecord(subscription)) {
+    return ACCESS_KINDS.PAID;
+  }
+
+  if (subscription.status === SUBSCRIPTION_STATUS.TRIAL) {
+    return ACCESS_KINDS.TRIAL;
+  }
+
+  if (subscription.type === SUBSCRIPTION_TYPES.FREE) {
+    return ACCESS_KINDS.FREE;
+  }
+
+  if (subscription.type === SUBSCRIPTION_TYPES.EDUCATIONAL) {
+    return ACCESS_KINDS.EDUCATIONAL;
+  }
+
+  return ACCESS_KINDS.PAID;
+}
+
+function resolveBillingCycle(subscription) {
+  if (
+    isRecord(subscription) &&
+    paidBillingOptions.some((option) => option.value === subscription.billingCycle)
+  ) {
+    return subscription.billingCycle;
+  }
+
+  return BILLING_CYCLES.MONTHLY;
+}
+
+function formatEditablePrice(value) {
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
+
+  const price = Number(value);
+
+  return Number.isFinite(price) ? String(price).replace('.', ',') : '';
 }
 
 function createFieldErrorMap(errors) {
@@ -216,6 +348,10 @@ function normalizeErrorMessage(error) {
 function normalizeText(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
+
+function isRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
 </script>
 
 <template>
@@ -231,10 +367,10 @@ function normalizeText(value) {
     >
       <div class="subscription-form__header">
         <p class="subscription-form__eyebrow">
-          Cadastro local
+          {{ formEyebrow }}
         </p>
         <h2 id="new-subscription-title">
-          Nova assinatura
+          {{ formTitle }}
         </h2>
       </div>
 
@@ -432,7 +568,7 @@ function normalizeText(value) {
           variant="primary"
           :disabled="isSubmitting"
         >
-          {{ isSubmitting ? 'Salvando' : 'Salvar assinatura' }}
+          {{ submitButtonText }}
         </BaseButton>
       </div>
     </form>

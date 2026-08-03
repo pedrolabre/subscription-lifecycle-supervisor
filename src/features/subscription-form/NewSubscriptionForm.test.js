@@ -151,6 +151,65 @@ describe('NewSubscriptionForm', () => {
     );
     expect(wrapper.text()).toContain('Informe o nome do servico.');
   });
+
+  it('hydrates edit mode and emits an update payload with hidden metadata', async () => {
+    const wrapper = mountForm({
+      mode: 'edit',
+      subscription: createSubscription({
+        brandColor: '#1db954',
+        category: 'music',
+        icon: '/assets/logos/spotify.svg',
+        serviceId: 'spotify',
+        serviceName: 'Spotify Premium',
+      }),
+    });
+
+    expect(wrapper.get('#new-subscription-title').text()).toBe(
+      'Editar assinatura',
+    );
+    expect(wrapper.get('[data-test="service-name"]').element.value).toBe(
+      'Spotify Premium',
+    );
+    expect(wrapper.get('[data-test="price"]').element.value).toBe('29,9');
+
+    await wrapper.get('[data-test="service-name"]').setValue('Spotify Duo');
+    await wrapper.get('[data-test="price"]').setValue('35,50');
+    await submitForm(wrapper);
+
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toEqual(
+      expect.objectContaining({
+        brandColor: '#1db954',
+        billingCycle: BILLING_CYCLES.MONTHLY,
+        category: 'music',
+        icon: '/assets/logos/spotify.svg',
+        price: 35.5,
+        renewalDate: '2026-09-01',
+        serviceId: 'spotify',
+        serviceName: 'Spotify Duo',
+        status: SUBSCRIPTION_STATUS.ACTIVE,
+        type: SUBSCRIPTION_TYPES.PAID,
+      }),
+    );
+  });
+
+  it('keeps archived or ended lifecycle status when editing details', async () => {
+    const wrapper = mountForm({
+      mode: 'edit',
+      subscription: createSubscription({
+        status: SUBSCRIPTION_STATUS.ARCHIVED,
+      }),
+    });
+
+    await wrapper.get('[data-test="service-name"]').setValue('Spotify Family');
+    await submitForm(wrapper);
+
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toEqual(
+      expect.objectContaining({
+        serviceName: 'Spotify Family',
+        status: SUBSCRIPTION_STATUS.ARCHIVED,
+      }),
+    );
+  });
 });
 
 function mountForm(props = {}) {
@@ -166,4 +225,23 @@ async function fillSharedFields(wrapper, values) {
 
 function submitForm(wrapper) {
   return wrapper.get('form').trigger('submit');
+}
+
+function createSubscription(overrides = {}) {
+  return {
+    billingCycle: BILLING_CYCLES.MONTHLY,
+    brandColor: null,
+    category: null,
+    icon: null,
+    id: 'sub_spotify',
+    price: 29.9,
+    renewalDate: '2026-09-01',
+    serviceId: null,
+    serviceName: 'Spotify Premium',
+    startDate: '2026-08-01',
+    status: SUBSCRIPTION_STATUS.ACTIVE,
+    trialEndDate: null,
+    type: SUBSCRIPTION_TYPES.PAID,
+    ...overrides,
+  };
 }
