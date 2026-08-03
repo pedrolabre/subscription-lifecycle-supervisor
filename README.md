@@ -135,6 +135,11 @@ subscription-lifecycle-supervisor/
         index.js
         store.js
         store.test.js
+    shared/
+      styles/
+        base.css
+        index.css
+        tokens.css
 ```
 
 Esta secao deve acompanhar apenas a estrutura publica real do projeto. Ela sera
