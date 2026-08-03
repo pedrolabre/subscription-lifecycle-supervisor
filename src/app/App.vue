@@ -4,6 +4,7 @@ import {
   SUBSCRIPTIONS_STORE_STATUS,
   useSubscriptionsStore,
 } from '../stores/subscriptions/index.js';
+import { formatCurrency } from '../core/money/index.js';
 import {
   BaseButton,
   StatePanel,
@@ -14,24 +15,6 @@ import { SubscriptionCard } from '../features/subscription-card/index.js';
 
 const productName = 'Subscription Lifecycle Supervisor';
 const subscriptionsStore = useSubscriptionsStore();
-
-const summaryItems = [
-  {
-    label: 'Mensal',
-    value: '--',
-    detail: 'Custo normalizado',
-  },
-  {
-    label: 'Anual',
-    value: '--',
-    detail: 'Projecao',
-  },
-  {
-    label: 'Ativas',
-    value: '--',
-    detail: 'Assinaturas',
-  },
-];
 
 const listColumns = ['Servico', 'Valor', 'Data'];
 
@@ -81,6 +64,81 @@ const errorMessage = computed(
     'Nao foi possivel ler as assinaturas locais.',
 );
 
+const trialAlerts = computed(() =>
+  Array.isArray(subscriptionsStore.trialAlerts)
+    ? subscriptionsStore.trialAlerts
+    : [],
+);
+
+const trialAlertCount = computed(() => trialAlerts.value.length);
+
+const hasTrialAlerts = computed(() => trialAlertCount.value > 0);
+
+const trialAlertSummary = computed(
+  () =>
+    `${formatCount(trialAlertCount.value)} ${
+      trialAlertCount.value === 1
+        ? 'trial perto do vencimento'
+        : 'trials perto do vencimento'
+    }`,
+);
+
+const trialAlertDetail = computed(() => {
+  const names = trialAlerts.value
+    .map((subscription) => normalizeSubscriptionName(subscription))
+    .filter(Boolean);
+
+  if (names.length === 0) {
+    return 'Revise os acessos temporarios.';
+  }
+
+  if (names.length === 1) {
+    return names[0];
+  }
+
+  if (names.length === 2) {
+    return names.join(' e ');
+  }
+
+  return `${names.slice(0, 2).join(', ')} e mais ${names.length - 2}`;
+});
+
+const summaryMetrics = computed(() => [
+  {
+    label: 'Mensal',
+    value: formatCurrency(subscriptionsStore.monthlyTotal),
+    detail: 'Custo normalizado',
+  },
+  {
+    label: 'Anual',
+    value: formatCurrency(subscriptionsStore.yearlyProjection),
+    detail: 'Projecao recorrente',
+  },
+  {
+    label: 'Ativas',
+    value: formatCount(subscriptionsStore.activeCount),
+    detail: 'Status ativo',
+  },
+  {
+    label: 'Trials',
+    value: formatCount(subscriptionsStore.trialCount),
+    detail: formatCountDetail(
+      trialAlertCount.value,
+      'alerta perto do fim',
+      'alertas perto do fim',
+    ),
+  },
+  {
+    label: 'Encerradas',
+    value: formatCount(subscriptionsStore.endedCount),
+    detail: formatCountDetail(
+      subscriptionsStore.archivedCount,
+      'arquivada',
+      'arquivadas',
+    ),
+  },
+]);
+
 const subscriptionCards = computed(() => {
   const summaryItems = subscriptionsStore.summary?.items;
 
@@ -108,6 +166,28 @@ function getSubscriptionKey(subscription, index) {
     subscription.id ??
     `${subscription.serviceName ?? 'subscription'}-${index}`
   );
+}
+
+function formatCount(value) {
+  return String(normalizeCount(value));
+}
+
+function formatCountDetail(value, singular, plural) {
+  const count = normalizeCount(value);
+
+  return `${formatCount(count)} ${count === 1 ? singular : plural}`;
+}
+
+function normalizeCount(value) {
+  const count = Number(value);
+
+  return Number.isFinite(count) && count > 0 ? Math.trunc(count) : 0;
+}
+
+function normalizeSubscriptionName(subscription) {
+  const name = subscription?.serviceName ?? subscription?.service?.name;
+
+  return typeof name === 'string' && name.trim() ? name.trim() : '';
 }
 </script>
 
@@ -165,13 +245,32 @@ function getSubscriptionKey(subscription, index) {
 
         <dl class="summary-grid">
           <SummaryMetric
-            v-for="item in summaryItems"
+            v-for="item in summaryMetrics"
             :key="item.label"
             :detail="item.detail"
             :label="item.label"
             :value="item.value"
           />
         </dl>
+
+        <div
+          v-if="hasTrialAlerts"
+          class="trial-summary-alert"
+          role="status"
+          aria-live="polite"
+        >
+          <StatusBadge tone="trial">
+            Trial
+          </StatusBadge>
+          <div class="trial-summary-alert__copy">
+            <p class="trial-summary-alert__title">
+              {{ trialAlertSummary }}
+            </p>
+            <p class="trial-summary-alert__detail">
+              {{ trialAlertDetail }}
+            </p>
+          </div>
+        </div>
       </section>
 
       <section
@@ -360,9 +459,41 @@ h2 {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
   gap: var(--space-3);
   margin: 0;
+}
+
+.trial-summary-alert {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-4);
+  border: 1px solid var(--status-trial-border);
+  border-radius: var(--radius-lg);
+  background: var(--status-trial-surface);
+}
+
+.trial-summary-alert__copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.trial-summary-alert__title,
+.trial-summary-alert__detail {
+  margin: 0;
+}
+
+.trial-summary-alert__title {
+  color: var(--text-primary);
+  font-weight: 900;
+}
+
+.trial-summary-alert__detail {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
 }
 
 .list-columns {
@@ -456,10 +587,6 @@ h2 {
 
   .app-primary-action {
     justify-content: center;
-  }
-
-  .summary-grid {
-    grid-template-columns: 1fr;
   }
 
   .list-columns {

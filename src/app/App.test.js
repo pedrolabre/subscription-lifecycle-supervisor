@@ -89,11 +89,82 @@ describe('App', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
+  it('renders real dashboard totals and status counters from the store', () => {
+    const wrapper = mountApp(
+      createStore({
+        activeCount: 2,
+        archivedCount: 1,
+        endedCount: 1,
+        hasSubscriptions: true,
+        isLoaded: true,
+        monthlyTotal: 39.9,
+        status: storeStatus.LOADED,
+        subscriptions: [createSubscription()],
+        summary: {
+          items: [
+            createSubscription({
+              id: 'sub_spotify',
+              price: 29.9,
+              serviceName: 'Spotify Premium',
+            }),
+            createSubscription({
+              billingCycle: 'yearly',
+              id: 'sub_google',
+              price: 120,
+              renewalDate: '2027-08-01',
+              serviceName: 'Google One',
+            }),
+            createSubscription({
+              billingCycle: 'none',
+              id: 'sub_figma',
+              price: 0,
+              renewalDate: null,
+              serviceName: 'Figma Education',
+              status: 'trial',
+              trialEndDate: '2026-08-07',
+              type: 'educational',
+            }),
+          ],
+        },
+        trialAlerts: [
+          createSubscription({
+            billingCycle: 'none',
+            id: 'sub_figma',
+            price: 0,
+            renewalDate: null,
+            serviceName: 'Figma Education',
+            status: 'trial',
+            trialEndDate: '2026-08-07',
+            type: 'educational',
+          }),
+        ],
+        trialCount: 1,
+        yearlyProjection: 478.8,
+      }),
+    );
+    const summary = wrapper.get('.summary-grid').text();
+
+    expect(summary).toContain('Mensal');
+    expect(summary).toContain('39,90');
+    expect(summary).toContain('Anual');
+    expect(summary).toContain('478,80');
+    expect(summary).toContain('Ativas');
+    expect(summary).toContain('Status ativo');
+    expect(summary).toContain('Trials');
+    expect(summary).toContain('1 alerta perto do fim');
+    expect(summary).toContain('Encerradas');
+    expect(summary).toContain('1 arquivada');
+    expect(wrapper.text()).toContain('1 trial perto do vencimento');
+    expect(wrapper.text()).toContain('Figma Education');
+  });
+
   it('renders loaded local data with subscription cards', () => {
     const wrapper = mountApp(
       createStore({
+        activeCount: 1,
         hasSubscriptions: true,
         isLoaded: true,
+        monthlyTotal: 29.9,
         summary: {
           items: [
             createSubscription({
@@ -107,6 +178,7 @@ describe('App', () => {
         },
         status: storeStatus.LOADED,
         subscriptions: [createSubscription()],
+        yearlyProjection: 358.8,
       }),
     );
 
@@ -131,6 +203,9 @@ function createStore(overrides = {}) {
   return reactive({
     canRetry: false,
     error: null,
+    activeCount: 0,
+    archivedCount: 0,
+    endedCount: 0,
     hasError: false,
     hasSubscriptions: false,
     isEmpty: false,
@@ -138,12 +213,16 @@ function createStore(overrides = {}) {
     isLoading: false,
     load: vi.fn().mockResolvedValue([]),
     loadError: null,
+    monthlyTotal: 0,
     reload: vi.fn().mockResolvedValue([]),
     status: storeStatus.IDLE,
     subscriptions: [],
     summary: {
       items: [],
     },
+    trialAlerts: [],
+    trialCount: 0,
+    yearlyProjection: 0,
     ...overrides,
   });
 }
