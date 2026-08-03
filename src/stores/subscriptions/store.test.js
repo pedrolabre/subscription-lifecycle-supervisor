@@ -8,6 +8,7 @@ import {
 import {
   createSubscriptionsStore,
   SUBSCRIPTIONS_STORE_ERROR_CODES,
+  SUBSCRIPTIONS_STORE_STATUS,
 } from './index.js';
 
 describe('subscriptions store', () => {
@@ -28,6 +29,9 @@ describe('subscriptions store', () => {
     expect(store.isLoading).toBe(true);
     expect(store.isLoaded).toBe(false);
     expect(store.error).toBeNull();
+    expect(store.loadError).toBeNull();
+    expect(store.mutationError).toBeNull();
+    expect(store.status).toBe(SUBSCRIPTIONS_STORE_STATUS.LOADING);
 
     deferred.resolve([
       subscription({
@@ -39,12 +43,36 @@ describe('subscriptions store', () => {
     await expect(loadPromise).resolves.toHaveLength(1);
     expect(store.isLoading).toBe(false);
     expect(store.isLoaded).toBe(true);
+    expect(store.hasSubscriptions).toBe(true);
+    expect(store.isEmpty).toBe(false);
+    expect(store.hasError).toBe(false);
+    expect(store.canRetry).toBe(false);
+    expect(store.status).toBe(SUBSCRIPTIONS_STORE_STATUS.LOADED);
     expect(store.subscriptions).toEqual([
       expect.objectContaining({
         id: 'sub_spotify',
         serviceName: 'Spotify Premium',
       }),
     ]);
+  });
+
+  it('loads an empty database as a loaded empty state', async () => {
+    const useStore = createTestStore({
+      repository: {
+        list: vi.fn().mockResolvedValue([]),
+      },
+    });
+    const store = useStore();
+
+    await expect(store.load()).resolves.toEqual([]);
+
+    expect(store.subscriptions).toEqual([]);
+    expect(store.isLoaded).toBe(true);
+    expect(store.hasSubscriptions).toBe(false);
+    expect(store.isEmpty).toBe(true);
+    expect(store.hasError).toBe(false);
+    expect(store.error).toBeNull();
+    expect(store.status).toBe(SUBSCRIPTIONS_STORE_STATUS.EMPTY);
   });
 
   it('keeps load failures recoverable', async () => {
@@ -65,17 +93,91 @@ describe('subscriptions store', () => {
 
     expect(store.isLoading).toBe(false);
     expect(store.isLoaded).toBe(false);
-    expect(store.error).toEqual({
+    expect(store.loadError).toEqual({
       code: 'local_read_failed',
       message: 'Falha local de leitura.',
       details: {
         operation: 'list',
       },
     });
+    expect(store.mutationError).toBeNull();
+    expect(store.error).toEqual(store.loadError);
+    expect(store.hasError).toBe(true);
+    expect(store.canRetry).toBe(true);
+    expect(store.status).toBe(SUBSCRIPTIONS_STORE_STATUS.ERROR);
 
     store.clearError();
 
     expect(store.error).toBeNull();
+    expect(store.loadError).toBeNull();
+    expect(store.mutationError).toBeNull();
+    expect(store.hasError).toBe(false);
+    expect(store.canRetry).toBe(false);
+    expect(store.status).toBe(SUBSCRIPTIONS_STORE_STATUS.IDLE);
+  });
+
+  it('retries a failed read using the same repository', async () => {
+    const cause = Object.assign(new Error('Falha local de leitura.'), {
+      code: 'local_read_failed',
+    });
+    const repository = {
+      list: vi.fn()
+        .mockRejectedValueOnce(cause)
+        .mockResolvedValueOnce([
+          subscription({
+            id: 'sub_google',
+            serviceName: 'Google One',
+          }),
+        ]),
+    };
+    const store = createTestStore({ repository })();
+
+    await expect(store.load()).rejects.toThrow('Falha local de leitura.');
+    expect(store.canRetry).toBe(true);
+
+    await expect(store.reload()).resolves.toHaveLength(1);
+
+    expect(repository.list).toHaveBeenCalledTimes(2);
+    expect(store.subscriptions).toEqual([
+      expect.objectContaining({
+        id: 'sub_google',
+        serviceName: 'Google One',
+      }),
+    ]);
+    expect(store.loadError).toBeNull();
+    expect(store.hasError).toBe(false);
+    expect(store.canRetry).toBe(false);
+    expect(store.status).toBe(SUBSCRIPTIONS_STORE_STATUS.LOADED);
+  });
+
+  it('preserves loaded subscriptions when a reload fails', async () => {
+    const loadedSubscription = subscription({
+      id: 'sub_spotify',
+      serviceName: 'Spotify Premium',
+    });
+    const cause = Object.assign(new Error('IndexedDB indisponivel.'), {
+      code: 'local_read_failed',
+    });
+    const repository = {
+      list: vi.fn()
+        .mockResolvedValueOnce([loadedSubscription])
+        .mockRejectedValueOnce(cause),
+    };
+    const store = createTestStore({ repository })();
+
+    await store.load();
+    await expect(store.reload()).rejects.toThrow('IndexedDB indisponivel.');
+
+    expect(store.subscriptions).toEqual([loadedSubscription]);
+    expect(store.isLoaded).toBe(true);
+    expect(store.hasSubscriptions).toBe(true);
+    expect(store.loadError).toEqual({
+      code: 'local_read_failed',
+      message: 'IndexedDB indisponivel.',
+      details: {},
+    });
+    expect(store.canRetry).toBe(true);
+    expect(store.status).toBe(SUBSCRIPTIONS_STORE_STATUS.LOADED);
   });
 
   it('uses a default recoverable error shape for unknown failures', async () => {
@@ -88,11 +190,61 @@ describe('subscriptions store', () => {
 
     await expect(store.create(subscription())).rejects.toBe('offline');
 
-    expect(store.error).toEqual({
+    expect(store.loadError).toBeNull();
+    expect(store.mutationError).toEqual({
       code: SUBSCRIPTIONS_STORE_ERROR_CODES.UNKNOWN,
       message: 'Nao foi possivel atualizar as assinaturas locais.',
       details: {},
     });
+    expect(store.error).toEqual(store.mutationError);
+    expect(store.hasError).toBe(true);
+    expect(store.canRetry).toBe(false);
+    expect(store.status).toBe(SUBSCRIPTIONS_STORE_STATUS.ERROR);
+
+    store.clearError();
+
+    expect(store.error).toBeNull();
+    expect(store.hasError).toBe(false);
+  });
+
+  it('preserves loaded subscriptions when a mutation fails', async () => {
+    const loadedSubscription = subscription({
+      id: 'sub_spotify',
+      serviceName: 'Spotify Premium',
+      price: 29.9,
+    });
+    const cause = Object.assign(new Error('Falha local de escrita.'), {
+      code: 'local_write_failed',
+      details: {
+        operation: 'update',
+      },
+    });
+    const useStore = createTestStore({
+      repository: {
+        update: vi.fn().mockRejectedValue(cause),
+      },
+    });
+    const store = useStore();
+
+    store.subscriptions = [loadedSubscription];
+    store.isLoaded = true;
+
+    await expect(store.update('sub_spotify', { price: 35.5 })).rejects.toThrow(
+      'Falha local de escrita.',
+    );
+
+    expect(store.subscriptions).toEqual([loadedSubscription]);
+    expect(store.loadError).toBeNull();
+    expect(store.mutationError).toEqual({
+      code: 'local_write_failed',
+      message: 'Falha local de escrita.',
+      details: {
+        operation: 'update',
+      },
+    });
+    expect(store.hasError).toBe(true);
+    expect(store.canRetry).toBe(false);
+    expect(store.status).toBe(SUBSCRIPTIONS_STORE_STATUS.LOADED);
   });
 
   it('creates, updates, archives and ends subscriptions through the repository', async () => {

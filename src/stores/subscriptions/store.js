@@ -12,6 +12,14 @@ export const SUBSCRIPTIONS_STORE_ERROR_CODES = Object.freeze({
   UNKNOWN: 'subscriptions_store_unknown_error',
 });
 
+export const SUBSCRIPTIONS_STORE_STATUS = Object.freeze({
+  IDLE: 'idle',
+  LOADING: 'loading',
+  EMPTY: 'empty',
+  LOADED: 'loaded',
+  ERROR: 'error',
+});
+
 export function createSubscriptionsStore(options = {}) {
   const storeId = options.storeId ?? SUBSCRIPTIONS_STORE_ID;
   const repository = options.repository ?? subscriptionsRepository;
@@ -21,7 +29,8 @@ export function createSubscriptionsStore(options = {}) {
     const subscriptions = ref([]);
     const isLoading = ref(false);
     const isLoaded = ref(false);
-    const error = ref(null);
+    const loadError = ref(null);
+    const mutationError = ref(null);
 
     const summary = computed(() =>
       summarizeSubscriptions(subscriptions.value, resolveSummaryOptions(summaryOptions)),
@@ -47,6 +56,25 @@ export function createSubscriptionsStore(options = {}) {
       () => activeSubscriptions.value.length,
     );
     const invalidCount = computed(() => summary.value.invalidCount);
+    const hasSubscriptions = computed(() => subscriptions.value.length > 0);
+    const hasError = computed(() =>
+      Boolean(loadError.value || mutationError.value),
+    );
+    const error = computed(() => loadError.value ?? mutationError.value);
+    const isEmpty = computed(
+      () => isLoaded.value && !isLoading.value && !hasSubscriptions.value,
+    );
+    const canRetry = computed(
+      () => Boolean(loadError.value) && !isLoading.value,
+    );
+    const status = computed(() =>
+      resolveRecoverableStatus({
+        isLoading: isLoading.value,
+        isLoaded: isLoaded.value,
+        hasSubscriptions: hasSubscriptions.value,
+        hasError: hasError.value,
+      }),
+    );
 
     async function load() {
       isLoading.value = true;
@@ -58,7 +86,7 @@ export function createSubscriptionsStore(options = {}) {
 
         return subscriptions.value;
       } catch (cause) {
-        error.value = createStoreError(cause);
+        loadError.value = createStoreError(cause);
         throw cause;
       } finally {
         isLoading.value = false;
@@ -105,8 +133,13 @@ export function createSubscriptionsStore(options = {}) {
       });
     }
 
+    function reload() {
+      return load();
+    }
+
     function clearError() {
-      error.value = null;
+      loadError.value = null;
+      mutationError.value = null;
     }
 
     async function runMutation(operation) {
@@ -115,7 +148,7 @@ export function createSubscriptionsStore(options = {}) {
       try {
         return await operation();
       } catch (cause) {
-        error.value = createStoreError(cause);
+        mutationError.value = createStoreError(cause);
         throw cause;
       }
     }
@@ -140,6 +173,13 @@ export function createSubscriptionsStore(options = {}) {
       isLoading,
       isLoaded,
       error,
+      loadError,
+      mutationError,
+      hasSubscriptions,
+      isEmpty,
+      hasError,
+      canRetry,
+      status,
       summary,
       activeSubscriptions,
       trialAlerts,
@@ -157,6 +197,7 @@ export function createSubscriptionsStore(options = {}) {
       update,
       archive,
       end,
+      reload,
       clearError,
     };
   });
@@ -170,6 +211,31 @@ function resolveSummaryOptions(summaryOptions) {
   }
 
   return summaryOptions ?? {};
+}
+
+function resolveRecoverableStatus({
+  isLoading,
+  isLoaded,
+  hasSubscriptions,
+  hasError,
+}) {
+  if (isLoading) {
+    return SUBSCRIPTIONS_STORE_STATUS.LOADING;
+  }
+
+  if (isLoaded && hasSubscriptions) {
+    return SUBSCRIPTIONS_STORE_STATUS.LOADED;
+  }
+
+  if (isLoaded) {
+    return SUBSCRIPTIONS_STORE_STATUS.EMPTY;
+  }
+
+  if (hasError) {
+    return SUBSCRIPTIONS_STORE_STATUS.ERROR;
+  }
+
+  return SUBSCRIPTIONS_STORE_STATUS.IDLE;
 }
 
 function createStoreError(cause) {
