@@ -124,6 +124,12 @@ subscription-lifecycle-supervisor/
         index.js
         schema.js
         settingsSeed.js
+      subscriptions/
+        index.js
+        mappers.js
+        mappers.test.js
+        repository.js
+        repository.test.js
 ```
 
 Esta secao deve acompanhar apenas a estrutura publica real do projeto. Ela sera
