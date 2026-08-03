@@ -130,6 +130,11 @@ subscription-lifecycle-supervisor/
         mappers.test.js
         repository.js
         repository.test.js
+    stores/
+      subscriptions/
+        index.js
+        store.js
+        store.test.js
 ```
 
 Esta secao deve acompanhar apenas a estrutura publica real do projeto. Ela sera
