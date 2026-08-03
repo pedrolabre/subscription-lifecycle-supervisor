@@ -117,6 +117,13 @@ subscription-lifecycle-supervisor/
         summary.test.js
         subscription.test.js
         validation.js
+    infrastructure/
+      db/
+        database.js
+        database.test.js
+        index.js
+        schema.js
+        settingsSeed.js
 ```
 
 Esta secao deve acompanhar apenas a estrutura publica real do projeto. Ela sera
