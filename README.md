@@ -1,13 +1,13 @@
 # Subscription Lifecycle Supervisor
 
-Subscription Lifecycle Supervisor sera um painel local-first para acompanhar
+Subscription Lifecycle Supervisor e um painel local-first para acompanhar
 assinaturas digitais, planos gratuitos, beneficios educacionais e periodos de
 teste.
 
 O objetivo do projeto e devolver controle sobre ciclos de cobranca e expiracao
 sem exigir login, conexao bancaria, planilhas complexas ou sincronizacao em
-nuvem. A aplicacao sera executada no navegador e os dados do usuario ficarao
-armazenados localmente.
+nuvem. A aplicacao roda no navegador, persiste os dados em IndexedDB e funciona
+como PWA depois de carregada/instalada.
 
 ---
 
@@ -22,19 +22,19 @@ Planilhas resolvem parte do problema, mas adicionam atrito. Aplicativos
 financeiros completos podem ser exagerados para quem so quer entender e
 acompanhar assinaturas.
 
-## A Solucao Pretendida
+## A Solucao
 
-O produto sera construido como uma aplicacao web simples, visual e local-first:
+O produto foi construido como uma aplicacao web simples, visual e local-first:
 
-- **Visual-first:** assinaturas serao exibidas em cards claros, com status,
+- **Visual-first:** assinaturas sao exibidas em cards claros, com status,
   valor, ciclo, data relevante e identidade visual do servico quando houver
   catalogo local.
-- **Local-first:** os dados serao persistidos no navegador do usuario, sem
+- **Local-first:** os dados sao persistidos no navegador do usuario, sem
   backend, login ou banco remoto no MVP.
-- **Foco no ciclo de vida:** o app priorizara renovacoes, trials perto do fim,
+- **Foco no ciclo de vida:** o app prioriza renovacoes, trials perto do fim,
   assinaturas encerradas e itens arquivados.
 
-## Funcionalidades Planejadas
+## Funcionalidades do MVP
 
 - Dashboard com custo mensal normalizado e projecao anual.
 - Cadastro rapido de assinatura paga, gratuita, educacional ou trial.
@@ -45,10 +45,17 @@ O produto sera construido como uma aplicacao web simples, visual e local-first:
 - Edicao, encerramento e arquivamento de assinaturas.
 - Persistencia local via IndexedDB.
 - Funcionamento offline como PWA.
+- Testes automatizados unitarios/componentes e E2E dos fluxos principais.
+- CI de validacao para build, testes, lint e E2E em Chromium.
 
-## Tecnologias Previstas
+## Limites do MVP
 
-A implementacao sera guiada pelo plano interno do projeto e deve usar:
+O MVP nao inclui backend, login, conta remota, banco remoto, sincronizacao entre
+dispositivos, analytics, notificacoes push reais, importacao/exportacao ou
+chamadas externas de runtime. Os dados ficam no navegador do usuario; limpar os
+dados do site no navegador tambem remove os registros locais.
+
+## Tecnologias
 
 - Vue 3 com Composition API.
 - Vite.
@@ -57,7 +64,7 @@ A implementacao sera guiada pelo plano interno do projeto e deve usar:
 - Dexie.js sobre IndexedDB.
 - vite-plugin-pwa.
 - CSS modular com design tokens.
-- Vitest, Vue Test Utils e Playwright quando a base de testes existir.
+- Vitest, Vue Test Utils e Playwright.
 
 ## Como Executar Localmente
 
@@ -83,6 +90,33 @@ usado pelo Playwright:
 ```bash
 npx playwright install chromium
 ```
+
+## Entrega Estatica
+
+O build de producao e gerado em `dist/`:
+
+```bash
+npm run build
+```
+
+O conteudo de `dist/` pode ser publicado em uma hospedagem estatica. O projeto
+nao possui deploy automatico configurado, nao exige secrets e nao depende de
+backend em runtime.
+
+## Validacao
+
+Antes de entregar uma alteracao, rode:
+
+```bash
+npm run build
+npm run test
+npm run lint
+npm run test:e2e
+```
+
+A CI em GitHub Actions executa a mesma validacao principal em `push` e
+`pull_request` para `main`, incluindo instalacao do Chromium do Playwright no
+ambiente de CI.
 
 ## Estrutura do Projeto
 
@@ -182,6 +216,6 @@ subscription-lifecycle-supervisor/
       main-flows.spec.js
 ```
 
-Esta secao deve acompanhar apenas a estrutura publica real do projeto. Ela sera
-atualizada conforme arquivos e diretorios publicos forem criados, removidos,
-movidos ou renomeados durante a implementacao.
+Esta secao acompanha apenas a estrutura publica real do projeto e deve ser
+atualizada quando arquivos e diretorios publicos forem criados, removidos,
+movidos ou renomeados.
