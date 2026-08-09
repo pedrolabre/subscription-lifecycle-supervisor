@@ -73,7 +73,15 @@ npm install
 npm run dev
 npm run build
 npm run test
+npm run test:e2e
 npm run lint
+```
+
+Para executar os testes E2E pela primeira vez neste ambiente, instale o browser
+usado pelo Playwright:
+
+```bash
+npx playwright install chromium
 ```
 
 ## Estrutura do Projeto
@@ -88,6 +96,7 @@ subscription-lifecycle-supervisor/
   index.html
   package.json
   package-lock.json
+  playwright.config.js
   vite.config.js
   public/
     icons/
@@ -165,6 +174,9 @@ subscription-lifecycle-supervisor/
         base.css
         index.css
         tokens.css
+  tests/
+    e2e/
+      main-flows.spec.js
 ```
 
 Esta secao deve acompanhar apenas a estrutura publica real do projeto. Ela sera
