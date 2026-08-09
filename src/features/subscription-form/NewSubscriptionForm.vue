@@ -7,6 +7,14 @@ import {
   SUBSCRIPTION_TYPES,
   validateSubscriptionPayload,
 } from '../../domain/subscriptions/index.js';
+import {
+  createFreeformService,
+  findServiceById,
+  findServiceByName,
+  getServiceCatalog,
+  normalizeServiceText,
+  searchServices,
+} from '../../domain/services/index.js';
 import { BaseButton } from '../../shared/components/index.js';
 
 const ACCESS_KINDS = Object.freeze({
@@ -55,6 +63,8 @@ const paidBillingOptions = Object.freeze([
   },
 ]);
 
+const serviceCatalog = getServiceCatalog();
+
 const props = defineProps({
   creationError: {
     type: Object,
@@ -93,6 +103,8 @@ const form = reactive({
 
 const localFieldErrors = ref({});
 const localFormError = ref('');
+const selectedServiceId = ref('');
+const hasClearedCatalogSelection = ref(false);
 
 const isEditing = computed(
   () => props.mode === FORM_MODES.EDIT && isRecord(props.subscription),
@@ -141,6 +153,18 @@ const submitButtonText = computed(() => {
   return isEditing.value ? 'Salvar edicao' : 'Salvar assinatura';
 });
 
+const selectedCatalogService = computed(() =>
+  findServiceById(selectedServiceId.value),
+);
+
+const hasSelectedCatalogService = computed(() =>
+  Boolean(selectedCatalogService.value),
+);
+
+const serviceSearchResults = computed(() =>
+  searchServices(form.serviceName, { limit: 5 }),
+);
+
 watch(
   () => [props.mode, props.subscription],
   () => {
@@ -157,6 +181,24 @@ watch(
     emit('change');
   },
   { deep: true },
+);
+
+watch(
+  () => form.serviceName,
+  (value) => {
+    const selectedService = selectedCatalogService.value;
+
+    if (!selectedService) {
+      return;
+    }
+
+    const matchingService = findServiceByName(value);
+
+    if (matchingService?.id !== selectedService.id) {
+      selectedServiceId.value = '';
+      hasClearedCatalogSelection.value = true;
+    }
+  },
 );
 
 function submitForm() {
@@ -232,13 +274,39 @@ function createNonPaidPayload(basePayload, type) {
 }
 
 function createHiddenPayload() {
-  const subscription = isEditing.value ? props.subscription : {};
+  const catalogService = selectedCatalogService.value;
+
+  if (catalogService) {
+    return createServiceMetadataPayload(catalogService);
+  }
+
+  return createServiceMetadataPayload(
+    createFreeformService(form.serviceName, createPreservedFreeformOptions()),
+  );
+}
+
+function createServiceMetadataPayload(service) {
+  return {
+    brandColor: service.color ?? null,
+    category: service.category ?? null,
+    icon: service.iconPath ?? null,
+    serviceId: service.id ?? null,
+  };
+}
+
+function createPreservedFreeformOptions() {
+  if (
+    !isEditing.value ||
+    hasClearedCatalogSelection.value ||
+    !hasUnchangedServiceName()
+  ) {
+    return {};
+  }
 
   return {
-    brandColor: subscription?.brandColor ?? null,
-    category: subscription?.category ?? null,
-    icon: subscription?.icon ?? null,
-    serviceId: subscription?.serviceId ?? null,
+    category: props.subscription?.category,
+    color: props.subscription?.brandColor,
+    iconPath: props.subscription?.icon,
   };
 }
 
@@ -271,8 +339,36 @@ function resetForm() {
   form.serviceName = normalizeText(subscription?.serviceName);
   form.startDate = normalizeText(subscription?.startDate);
   form.trialEndDate = normalizeText(subscription?.trialEndDate);
+  selectedServiceId.value = resolveInitialServiceId(subscription);
+  hasClearedCatalogSelection.value = false;
   localFieldErrors.value = {};
   localFormError.value = '';
+}
+
+function selectCatalogServiceId(serviceId) {
+  const service = findServiceById(serviceId);
+
+  if (!service) {
+    clearCatalogSelection();
+    return;
+  }
+
+  selectCatalogService(service);
+}
+
+function selectCatalogService(service) {
+  if (!isRecord(service)) {
+    return;
+  }
+
+  selectedServiceId.value = service.id;
+  hasClearedCatalogSelection.value = false;
+  form.serviceName = service.name;
+}
+
+function clearCatalogSelection() {
+  selectedServiceId.value = '';
+  hasClearedCatalogSelection.value = true;
 }
 
 function resolveAccessKind(subscription) {
@@ -304,6 +400,35 @@ function resolveBillingCycle(subscription) {
   }
 
   return BILLING_CYCLES.MONTHLY;
+}
+
+function resolveInitialServiceId(subscription) {
+  const service = findServiceById(subscription?.serviceId);
+
+  if (!service || !hasCatalogMetadata(subscription, service)) {
+    return '';
+  }
+
+  return service.id;
+}
+
+function isSelectedService(service) {
+  return service?.id === selectedServiceId.value;
+}
+
+function hasUnchangedServiceName() {
+  return (
+    normalizeServiceText(form.serviceName) ===
+    normalizeServiceText(props.subscription?.serviceName)
+  );
+}
+
+function hasCatalogMetadata(subscription, service) {
+  return (
+    normalizeText(subscription?.brandColor).toLowerCase() === service.color ||
+    normalizeText(subscription?.category) === service.category ||
+    normalizeText(subscription?.icon) === service.iconPath
+  );
 }
 
 function formatEditablePrice(value) {
@@ -408,9 +533,12 @@ function isRecord(value) {
       </fieldset>
 
       <div class="subscription-form__grid">
-        <label class="subscription-form__field">
-          <span>Servico</span>
+        <div class="subscription-form__field subscription-form__field--service">
+          <label for="subscription-service-name">
+            Servico
+          </label>
           <input
+            id="subscription-service-name"
             v-model="form.serviceName"
             data-test="service-name"
             type="text"
@@ -429,7 +557,68 @@ function isRecord(value) {
           >
             {{ fieldErrors.serviceName }}
           </span>
-        </label>
+
+          <div class="subscription-form__catalog-row">
+            <label class="subscription-form__catalog-select">
+              <span>Catalogo</span>
+              <select
+                data-test="service-catalog-select"
+                :value="selectedServiceId"
+                @change="selectCatalogServiceId($event.target.value)"
+              >
+                <option value="">
+                  Nome livre
+                </option>
+                <option
+                  v-for="service in serviceCatalog"
+                  :key="service.id"
+                  :value="service.id"
+                >
+                  {{ service.name }}
+                </option>
+              </select>
+            </label>
+
+            <BaseButton
+              v-if="hasSelectedCatalogService"
+              class="subscription-form__catalog-clear"
+              data-test="clear-service-selection"
+              type="button"
+              variant="secondary"
+              :disabled="isSubmitting"
+              @click="clearCatalogSelection"
+            >
+              Limpar
+            </BaseButton>
+          </div>
+
+          <div
+            v-if="serviceSearchResults.length"
+            class="subscription-form__catalog-suggestions"
+            aria-label="Servicos encontrados"
+          >
+            <button
+              v-for="service in serviceSearchResults"
+              :key="service.id"
+              class="subscription-form__catalog-suggestion"
+              :class="{
+                'subscription-form__catalog-suggestion--selected':
+                  isSelectedService(service),
+              }"
+              :aria-pressed="isSelectedService(service)"
+              data-test="service-catalog-suggestion"
+              type="button"
+              @click="selectCatalogService(service)"
+            >
+              <span
+                class="subscription-form__catalog-swatch"
+                :style="{ '--service-swatch-color': service.color }"
+                aria-hidden="true"
+              />
+              <span>{{ service.name }}</span>
+            </button>
+          </div>
+        </div>
 
         <label class="subscription-form__field">
           <span>Inicio</span>
@@ -596,6 +785,8 @@ function isRecord(value) {
 
 .subscription-form__eyebrow,
 .subscription-form__group legend,
+.subscription-form__field > label:first-child,
+.subscription-form__catalog-select > span:first-child,
 .subscription-form__field > span:first-child {
   color: var(--text-accent);
   font-size: var(--font-size-xs);
@@ -692,9 +883,65 @@ function isRecord(value) {
   gap: var(--space-2);
 }
 
+.subscription-form__field--service {
+  grid-column: 1 / -1;
+}
+
 .subscription-form__field input[aria-invalid="true"],
 .subscription-form__field select[aria-invalid="true"] {
   border-color: var(--border-danger);
+}
+
+.subscription-form__catalog-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.subscription-form__catalog-select {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+}
+
+.subscription-form__catalog-clear {
+  min-height: var(--control-height-md);
+}
+
+.subscription-form__catalog-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.subscription-form__catalog-suggestion {
+  display: inline-flex;
+  min-height: var(--control-height-sm);
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  border-color: var(--status-info-border);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  background: var(--status-info-surface);
+  font-size: var(--font-size-sm);
+}
+
+.subscription-form__catalog-suggestion--selected {
+  border-color: var(--status-active-border);
+  color: var(--text-primary);
+  background: var(--status-active-surface);
+}
+
+.subscription-form__catalog-swatch {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: 0 0 auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--service-swatch-color, var(--text-accent));
 }
 
 .subscription-form__field-error {
@@ -716,12 +963,14 @@ function isRecord(value) {
   }
 
   .subscription-form__kind-options,
-  .subscription-form__grid {
+  .subscription-form__grid,
+  .subscription-form__catalog-row {
     grid-template-columns: 1fr;
   }
 
   .subscription-form__actions,
-  .subscription-form__actions .base-button {
+  .subscription-form__actions .base-button,
+  .subscription-form__catalog-clear {
     width: 100%;
   }
 }

@@ -5,6 +5,10 @@ import {
   SUBSCRIPTION_STATUS,
   SUBSCRIPTION_TYPES,
 } from '../../domain/subscriptions/index.js';
+import {
+  SERVICE_BRAND_FALLBACK,
+  SERVICE_CATEGORIES,
+} from '../../domain/services/index.js';
 import NewSubscriptionForm from './NewSubscriptionForm.vue';
 
 describe('NewSubscriptionForm', () => {
@@ -33,6 +37,64 @@ describe('NewSubscriptionForm', () => {
         status: SUBSCRIPTION_STATUS.ACTIVE,
         trialEndDate: null,
         type: SUBSCRIPTION_TYPES.PAID,
+      }),
+    );
+  });
+
+  it('selects a known catalog service and emits its persisted metadata', async () => {
+    const wrapper = mountForm();
+
+    await wrapper.get('[data-test="service-catalog-select"]').setValue('spotify');
+    await wrapper.get('[data-test="start-date"]').setValue('2026-08-01');
+    await wrapper.get('[data-test="price"]').setValue('29,90');
+    await wrapper.get('[data-test="renewal-date"]').setValue('2026-09-01');
+    await submitForm(wrapper);
+
+    expect(wrapper.get('[data-test="service-name"]').element.value).toBe(
+      'Spotify',
+    );
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toEqual(
+      expect.objectContaining({
+        brandColor: '#1db954',
+        category: SERVICE_CATEGORIES.MUSIC,
+        icon: '/assets/logos/spotify.svg',
+        serviceId: 'spotify',
+        serviceName: 'Spotify',
+      }),
+    );
+  });
+
+  it('uses local search suggestions by alias without losing filled fields', async () => {
+    const wrapper = mountForm();
+
+    await wrapper.get('[data-test="service-name"]').setValue('prime video');
+    await wrapper.get('[data-test="start-date"]').setValue('2026-08-01');
+    await wrapper.get('[data-test="price"]').setValue('19,90');
+    await wrapper.get('[data-test="renewal-date"]').setValue('2026-09-01');
+
+    const amazonPrimeSuggestion = wrapper
+      .findAll('[data-test="service-catalog-suggestion"]')
+      .find((suggestion) => suggestion.text().includes('Amazon Prime'));
+
+    expect(amazonPrimeSuggestion).toBeDefined();
+
+    await amazonPrimeSuggestion.trigger('click');
+    await submitForm(wrapper);
+
+    expect(wrapper.get('[data-test="service-name"]').element.value).toBe(
+      'Amazon Prime',
+    );
+    expect(wrapper.get('[data-test="price"]').element.value).toBe('19,90');
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toEqual(
+      expect.objectContaining({
+        brandColor: '#00a8e1',
+        category: SERVICE_CATEGORIES.VIDEO,
+        icon: '/assets/logos/amazon-prime.svg',
+        price: 19.9,
+        renewalDate: '2026-09-01',
+        serviceId: 'amazon-prime',
+        serviceName: 'Amazon Prime',
+        startDate: '2026-08-01',
       }),
     );
   });
@@ -171,8 +233,10 @@ describe('NewSubscriptionForm', () => {
       'Spotify Premium',
     );
     expect(wrapper.get('[data-test="price"]').element.value).toBe('29,9');
+    expect(wrapper.get('[data-test="service-catalog-select"]').element.value).toBe(
+      'spotify',
+    );
 
-    await wrapper.get('[data-test="service-name"]').setValue('Spotify Duo');
     await wrapper.get('[data-test="price"]').setValue('35,50');
     await submitForm(wrapper);
 
@@ -185,9 +249,43 @@ describe('NewSubscriptionForm', () => {
         price: 35.5,
         renewalDate: '2026-09-01',
         serviceId: 'spotify',
-        serviceName: 'Spotify Duo',
+        serviceName: 'Spotify Premium',
         status: SUBSCRIPTION_STATUS.ACTIVE,
         type: SUBSCRIPTION_TYPES.PAID,
+      }),
+    );
+  });
+
+  it('clears catalog selection and keeps essential edited fields as freeform', async () => {
+    const wrapper = mountForm({
+      mode: 'edit',
+      subscription: createSubscription({
+        brandColor: '#1db954',
+        category: SERVICE_CATEGORIES.MUSIC,
+        icon: '/assets/logos/spotify.svg',
+        serviceId: 'spotify',
+        serviceName: 'Spotify Premium',
+      }),
+    });
+
+    await wrapper.get('[data-test="clear-service-selection"]').trigger('click');
+    await wrapper.get('[data-test="service-name"]').setValue('Minha assinatura');
+    await wrapper.get('[data-test="price"]').setValue('35,50');
+    await submitForm(wrapper);
+
+    expect(wrapper.get('[data-test="service-catalog-select"]').element.value).toBe(
+      '',
+    );
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toEqual(
+      expect.objectContaining({
+        brandColor: SERVICE_BRAND_FALLBACK.color,
+        category: SERVICE_CATEGORIES.OTHER,
+        icon: SERVICE_BRAND_FALLBACK.iconPath,
+        price: 35.5,
+        renewalDate: '2026-09-01',
+        serviceId: null,
+        serviceName: 'Minha assinatura',
+        startDate: '2026-08-01',
       }),
     );
   });

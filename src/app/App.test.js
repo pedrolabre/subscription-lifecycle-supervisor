@@ -243,7 +243,7 @@ describe('App', () => {
     const wrapper = mountApp(store);
 
     await wrapper.get('[data-test="open-subscription-form"]').trigger('click');
-    await wrapper.get('[data-test="service-name"]').setValue('Spotify Premium');
+    await wrapper.get('[data-test="service-catalog-select"]').setValue('spotify');
     await wrapper.get('[data-test="start-date"]').setValue('2026-08-01');
     await wrapper.get('[data-test="price"]').setValue('29,90');
     await wrapper.get('[data-test="renewal-date"]').setValue('2026-09-01');
@@ -253,9 +253,13 @@ describe('App', () => {
     expect(store.create).toHaveBeenCalledWith(
       expect.objectContaining({
         billingCycle: 'monthly',
+        brandColor: '#1db954',
+        category: 'music',
+        icon: '/assets/logos/spotify.svg',
         price: 29.9,
         renewalDate: '2026-09-01',
-        serviceName: 'Spotify Premium',
+        serviceId: 'spotify',
+        serviceName: 'Spotify',
         startDate: '2026-08-01',
         status: 'active',
         type: 'paid',
@@ -263,7 +267,7 @@ describe('App', () => {
     );
     expect(wrapper.find('#new-subscription-form').exists()).toBe(false);
     expect(wrapper.get('.summary-grid').text()).toContain('29,90');
-    expect(wrapper.get('[role="list"]').text()).toContain('Spotify Premium');
+    expect(wrapper.get('[role="list"]').text()).toContain('Spotify');
     expect(wrapper.get('[role="list"]').text()).toContain('29,90');
   });
 
@@ -308,7 +312,9 @@ describe('App', () => {
       'Editar assinatura',
     );
 
-    await wrapper.get('[data-test="service-name"]').setValue('Spotify Duo');
+    await wrapper
+      .get('[data-test="service-catalog-select"]')
+      .setValue('google-one');
     await wrapper.get('[data-test="price"]').setValue('35,50');
     await wrapper.get('form').trigger('submit');
     await flushPromises();
@@ -317,16 +323,20 @@ describe('App', () => {
       'sub_spotify',
       expect.objectContaining({
         billingCycle: 'monthly',
+        brandColor: '#4285f4',
+        category: 'cloud',
+        icon: '/assets/logos/google-one.svg',
         price: 35.5,
         renewalDate: '2026-09-01',
-        serviceName: 'Spotify Duo',
+        serviceId: 'google-one',
+        serviceName: 'Google One',
         status: 'active',
         type: 'paid',
       }),
     );
     expect(wrapper.find('#new-subscription-form').exists()).toBe(false);
     expect(wrapper.get('.summary-grid').text()).toContain('35,50');
-    expect(wrapper.get('[role="list"]').text()).toContain('Spotify Duo');
+    expect(wrapper.get('[role="list"]').text()).toContain('Google One');
   });
 
   it('archives a persisted subscription and refreshes totals from the store', async () => {
