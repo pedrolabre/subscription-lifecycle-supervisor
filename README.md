@@ -89,6 +89,12 @@ subscription-lifecycle-supervisor/
   package.json
   package-lock.json
   vite.config.js
+  public/
+    icons/
+      app-icon.svg
+      pwa-icon-192.png
+      pwa-icon-512.png
+      pwa-maskable-512.png
   src/
     app/
       App.vue
@@ -133,6 +139,9 @@ subscription-lifecycle-supervisor/
         index.js
         schema.js
         settingsSeed.js
+      pwa/
+        config.js
+        config.test.js
       subscriptions/
         index.js
         mappers.js

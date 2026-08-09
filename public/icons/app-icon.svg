@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Subscription Lifecycle Supervisor icon</title>
+  <desc id="desc">A dark app icon with renewal bars and a lifecycle ring.</desc>
+  <rect width="512" height="512" rx="112" fill="#0b0d0c" />
+  <path fill="#171a18" d="M104 102h304c27 0 49 22 49 49v210c0 27-22 49-49 49H104c-27 0-49-22-49-49V151c0-27 22-49 49-49Z" />
+  <path fill="#42d392" d="M140 176h118c13 0 23 10 23 23s-10 23-23 23H140c-13 0-23-10-23-23s10-23 23-23Z" />
+  <path fill="#9de2d4" d="M140 250h172c13 0 23 10 23 23s-10 23-23 23H140c-13 0-23-10-23-23s10-23 23-23Z" />
+  <path fill="#f7c66a" d="M140 324h92c13 0 23 10 23 23s-10 23-23 23h-92c-13 0-23-10-23-23s10-23 23-23Z" />
+  <path fill="none" stroke="#42d392" stroke-linecap="round" stroke-width="34" d="M382 186a80 80 0 1 1-67 124" />
+  <path fill="none" stroke="#f5f2e8" stroke-linecap="round" stroke-width="28" d="M347 174h50v50" />
+</svg>
