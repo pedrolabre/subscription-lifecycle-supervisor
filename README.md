@@ -90,6 +90,9 @@ Estrutura publica atual:
 
 ```text
 subscription-lifecycle-supervisor/
+  .github/
+    workflows/
+      ci.yml
   .gitignore
   README.md
   eslint.config.js
