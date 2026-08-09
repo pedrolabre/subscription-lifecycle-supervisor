@@ -183,6 +183,9 @@ describe('App', () => {
     );
 
     expect(wrapper.text()).toContain('Dados carregados');
+    expect(wrapper.get('[role="list"]').attributes('aria-label')).toBe(
+      '1 assinatura carregada',
+    );
     expect(wrapper.get('[role="list"]').text()).toContain('Spotify Premium');
     expect(wrapper.get('[role="list"]').text()).toContain('29,90');
     expect(wrapper.get('[role="list"]').text()).toContain('/ mes');

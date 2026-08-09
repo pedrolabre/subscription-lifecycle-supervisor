@@ -157,6 +157,14 @@ const subscriptionCards = computed(() => {
     : subscriptionsStore.subscriptions;
 });
 
+const subscriptionsListLabel = computed(() => {
+  const count = subscriptionCards.value.length;
+
+  return `${formatCount(count)} ${
+    count === 1 ? 'assinatura carregada' : 'assinaturas carregadas'
+  }`;
+});
+
 const subscriptionFormMode = computed(() =>
   editingSubscription.value ? 'edit' : 'create',
 );
@@ -554,7 +562,7 @@ function createLocalMutationError(message) {
             <div
               class="subscription-card-grid"
               role="list"
-              aria-label="Assinaturas carregadas"
+              :aria-label="subscriptionsListLabel"
             >
               <SubscriptionCard
                 v-for="(subscription, index) in subscriptionCards"
@@ -628,6 +636,10 @@ function createLocalMutationError(message) {
   align-items: center;
   justify-content: flex-end;
   min-width: 0;
+}
+
+.app-header-actions > * {
+  max-width: 100%;
 }
 
 h1,
@@ -729,6 +741,7 @@ h2 {
 }
 
 .subscriptions-list-shell {
+  min-width: 0;
   overflow: hidden;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -748,6 +761,11 @@ h2 {
   min-height: 3rem;
   padding: 0 var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
+}
+
+.list-columns span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .list-row-slot {
@@ -789,6 +807,7 @@ h2 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 16.5rem), 1fr));
   gap: var(--space-4);
+  min-width: 0;
   padding: var(--space-4);
 }
 

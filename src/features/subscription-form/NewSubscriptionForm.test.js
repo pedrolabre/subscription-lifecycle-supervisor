@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import { describe, expect, it } from 'vitest';
 import {
   BILLING_CYCLES,
@@ -77,6 +78,12 @@ describe('NewSubscriptionForm', () => {
       .find((suggestion) => suggestion.text().includes('Amazon Prime'));
 
     expect(amazonPrimeSuggestion).toBeDefined();
+    expect(
+      wrapper.get('.subscription-form__catalog-suggestions').element.tagName,
+    ).toBe('UL');
+    expect(amazonPrimeSuggestion.attributes('aria-label')).toBe(
+      'Usar Amazon Prime do catalogo local',
+    );
 
     await amazonPrimeSuggestion.trigger('click');
     await submitForm(wrapper);
@@ -171,17 +178,35 @@ describe('NewSubscriptionForm', () => {
   });
 
   it('uses domain validation messages before emitting submit', async () => {
-    const wrapper = mountForm();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const wrapper = mountForm({}, { attachTo: host });
 
     await submitForm(wrapper);
+    await nextTick();
 
     expect(wrapper.emitted('submit')).toBeUndefined();
     expect(wrapper.get('[role="alert"]').text()).toBe(
       'Revise os campos destacados.',
     );
+    expect(wrapper.get('form').attributes('aria-describedby')).toBe(
+      'subscription-form-error-summary',
+    );
+    expect(wrapper.get('[data-test="service-name"]').attributes()).toEqual(
+      expect.objectContaining({
+        'aria-describedby': 'service-name-error',
+        'aria-invalid': 'true',
+      }),
+    );
     expect(wrapper.text()).toContain('Informe o nome do servico.');
     expect(wrapper.text()).toContain('Informe a data de inicio da assinatura.');
     expect(wrapper.text()).toContain('Informe a data de renovacao da assinatura.');
+    expect(document.activeElement).toBe(
+      wrapper.get('[data-test="service-name"]').element,
+    );
+
+    wrapper.unmount();
+    host.remove();
   });
 
   it('emits cancel without changing the form payload', async () => {
@@ -210,6 +235,9 @@ describe('NewSubscriptionForm', () => {
 
     expect(wrapper.get('[role="alert"]').text()).toBe(
       'Assinatura local invalida.',
+    );
+    expect(wrapper.get('form').attributes('aria-describedby')).toBe(
+      'subscription-form-error-summary',
     );
     expect(wrapper.text()).toContain('Informe o nome do servico.');
   });
@@ -310,8 +338,9 @@ describe('NewSubscriptionForm', () => {
   });
 });
 
-function mountForm(props = {}) {
+function mountForm(props = {}, options = {}) {
   return mount(NewSubscriptionForm, {
+    ...options,
     props,
   });
 }

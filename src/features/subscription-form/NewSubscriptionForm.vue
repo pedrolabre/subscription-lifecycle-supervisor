@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import {
   BILLING_CYCLES,
   SUBSCRIPTION_FIELD_LIMITS,
@@ -105,6 +105,22 @@ const localFieldErrors = ref({});
 const localFormError = ref('');
 const selectedServiceId = ref('');
 const hasClearedCatalogSelection = ref(false);
+const errorSummaryRef = ref(null);
+const serviceNameInput = ref(null);
+const startDateInput = ref(null);
+const priceInput = ref(null);
+const billingCycleSelect = ref(null);
+const renewalDateInput = ref(null);
+const trialEndDateInput = ref(null);
+
+const fieldFocusTargets = {
+  billingCycle: billingCycleSelect,
+  price: priceInput,
+  renewalDate: renewalDateInput,
+  serviceName: serviceNameInput,
+  startDate: startDateInput,
+  trialEndDate: trialEndDateInput,
+};
 
 const isEditing = computed(
   () => props.mode === FORM_MODES.EDIT && isRecord(props.subscription),
@@ -143,6 +159,10 @@ const formEyebrow = computed(() =>
 
 const formTitle = computed(() =>
   isEditing.value ? 'Editar assinatura' : 'Nova assinatura',
+);
+
+const formDescribedBy = computed(() =>
+  formError.value ? 'subscription-form-error-summary' : undefined,
 );
 
 const submitButtonText = computed(() => {
@@ -201,6 +221,12 @@ watch(
   },
 );
 
+onMounted(() => {
+  nextTick(() => {
+    serviceNameInput.value?.focus();
+  });
+});
+
 function submitForm() {
   if (props.isSubmitting) {
     return;
@@ -211,6 +237,7 @@ function submitForm() {
   if (!validation.isValid) {
     localFieldErrors.value = createFieldErrorMap(validation.errors);
     localFormError.value = 'Revise os campos destacados.';
+    focusFirstInvalidField(validation.errors);
     return;
   }
 
@@ -221,6 +248,20 @@ function submitForm() {
 
 function emitCancel() {
   emit('cancel');
+}
+
+function focusFirstInvalidField(errors) {
+  const firstInvalidField = errors
+    .map((error) => normalizeText(error?.field))
+    .find((field) => Boolean(fieldFocusTargets[field]?.value));
+
+  nextTick(() => {
+    const target = firstInvalidField
+      ? fieldFocusTargets[firstInvalidField]?.value
+      : null;
+
+    (target ?? errorSummaryRef.value)?.focus?.();
+  });
 }
 
 function createSubscriptionPayload() {
@@ -488,6 +529,9 @@ function isRecord(value) {
     <form
       class="subscription-form"
       novalidate
+      aria-labelledby="new-subscription-title"
+      :aria-busy="isSubmitting"
+      :aria-describedby="formDescribedBy"
       @submit.prevent="submitForm"
     >
       <div class="subscription-form__header">
@@ -501,8 +545,11 @@ function isRecord(value) {
 
       <p
         v-if="formError"
+        id="subscription-form-error-summary"
+        ref="errorSummaryRef"
         class="subscription-form__error-summary"
         role="alert"
+        tabindex="-1"
       >
         {{ formError }}
       </p>
@@ -539,6 +586,7 @@ function isRecord(value) {
           </label>
           <input
             id="subscription-service-name"
+            ref="serviceNameInput"
             v-model="form.serviceName"
             data-test="service-name"
             type="text"
@@ -562,6 +610,7 @@ function isRecord(value) {
             <label class="subscription-form__catalog-select">
               <span>Catalogo</span>
               <select
+                id="subscription-service-catalog"
                 data-test="service-catalog-select"
                 :value="selectedServiceId"
                 @change="selectCatalogServiceId($event.target.value)"
@@ -585,6 +634,7 @@ function isRecord(value) {
               data-test="clear-service-selection"
               type="button"
               variant="secondary"
+              :aria-label="`Limpar selecao de ${selectedCatalogService.name}`"
               :disabled="isSubmitting"
               @click="clearCatalogSelection"
             >
@@ -592,37 +642,43 @@ function isRecord(value) {
             </BaseButton>
           </div>
 
-          <div
+          <ul
             v-if="serviceSearchResults.length"
             class="subscription-form__catalog-suggestions"
             aria-label="Servicos encontrados"
           >
-            <button
+            <li
               v-for="service in serviceSearchResults"
               :key="service.id"
-              class="subscription-form__catalog-suggestion"
-              :class="{
-                'subscription-form__catalog-suggestion--selected':
-                  isSelectedService(service),
-              }"
-              :aria-pressed="isSelectedService(service)"
-              data-test="service-catalog-suggestion"
-              type="button"
-              @click="selectCatalogService(service)"
+              class="subscription-form__catalog-suggestion-item"
             >
-              <span
-                class="subscription-form__catalog-swatch"
-                :style="{ '--service-swatch-color': service.color }"
-                aria-hidden="true"
-              />
-              <span>{{ service.name }}</span>
-            </button>
-          </div>
+              <button
+                class="subscription-form__catalog-suggestion"
+                :class="{
+                  'subscription-form__catalog-suggestion--selected':
+                    isSelectedService(service),
+                }"
+                :aria-label="`Usar ${service.name} do catalogo local`"
+                :aria-pressed="isSelectedService(service)"
+                data-test="service-catalog-suggestion"
+                type="button"
+                @click="selectCatalogService(service)"
+              >
+                <span
+                  class="subscription-form__catalog-swatch"
+                  :style="{ '--service-swatch-color': service.color }"
+                  aria-hidden="true"
+                />
+                <span>{{ service.name }}</span>
+              </button>
+            </li>
+          </ul>
         </div>
 
         <label class="subscription-form__field">
           <span>Inicio</span>
           <input
+            ref="startDateInput"
             v-model="form.startDate"
             data-test="start-date"
             type="date"
@@ -646,6 +702,7 @@ function isRecord(value) {
         >
           <span>Valor</span>
           <input
+            ref="priceInput"
             v-model="form.price"
             data-test="price"
             type="text"
@@ -670,6 +727,7 @@ function isRecord(value) {
         >
           <span>Ciclo</span>
           <select
+            ref="billingCycleSelect"
             v-model="form.billingCycle"
             data-test="billing-cycle"
             :aria-invalid="Boolean(fieldErrors.billingCycle)"
@@ -700,6 +758,7 @@ function isRecord(value) {
         >
           <span>Renovacao</span>
           <input
+            ref="renewalDateInput"
             v-model="form.renewalDate"
             data-test="renewal-date"
             type="date"
@@ -723,6 +782,7 @@ function isRecord(value) {
         >
           <span>Fim do trial</span>
           <input
+            ref="trialEndDateInput"
             v-model="form.trialEndDate"
             data-test="trial-end-date"
             type="date"
@@ -858,6 +918,12 @@ function isRecord(value) {
   background: var(--surface-control-hover);
 }
 
+.subscription-form__kind-option:focus-within {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-offset);
+  box-shadow: var(--focus-ring);
+}
+
 .subscription-form__kind-option--selected {
   border-color: var(--status-active-border);
   color: var(--text-primary);
@@ -869,6 +935,12 @@ function isRecord(value) {
   width: 1px;
   height: 1px;
   opacity: 0;
+}
+
+.subscription-form__kind-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .subscription-form__grid {
@@ -913,11 +985,23 @@ function isRecord(value) {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.subscription-form__catalog-suggestion-item {
+  display: flex;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .subscription-form__catalog-suggestion {
   display: inline-flex;
   min-height: var(--control-height-sm);
+  max-width: 100%;
+  min-width: 0;
   align-items: center;
   gap: var(--space-2);
   padding: 0 var(--space-3);
@@ -926,6 +1010,10 @@ function isRecord(value) {
   color: var(--text-secondary);
   background: var(--status-info-surface);
   font-size: var(--font-size-sm);
+  line-height: var(--line-tight);
+  overflow-wrap: anywhere;
+  text-align: left;
+  white-space: normal;
 }
 
 .subscription-form__catalog-suggestion--selected {

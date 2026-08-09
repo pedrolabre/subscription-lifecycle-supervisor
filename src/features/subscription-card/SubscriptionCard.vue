@@ -161,6 +161,29 @@ const subscriptionId = computed(() => normalizeText(props.subscription.id, ''));
 
 const hasSubscriptionId = computed(() => Boolean(subscriptionId.value));
 
+const cardBaseId = computed(
+  () =>
+    `subscription-card-${createSafeId(
+      subscriptionId.value || displayName.value,
+    )}`,
+);
+
+const cardTitleId = computed(() => `${cardBaseId.value}-title`);
+const cardStatusId = computed(() => `${cardBaseId.value}-status`);
+const cardPriceId = computed(() => `${cardBaseId.value}-price`);
+const cardDateId = computed(() => `${cardBaseId.value}-date`);
+const cardWarningId = computed(() => `${cardBaseId.value}-warning`);
+
+const cardDescriptionIds = computed(() =>
+  [
+    isTrialWarning.value ? cardWarningId.value : '',
+    cardPriceId.value,
+    cardDateId.value,
+  ]
+    .filter(Boolean)
+    .join(' '),
+);
+
 const canArchive = computed(
   () =>
     hasSubscriptionId.value &&
@@ -171,6 +194,24 @@ const canEnd = computed(
   () =>
     hasSubscriptionId.value &&
     props.subscription.status !== SUBSCRIPTION_STATUS.ENDED,
+);
+
+const editActionLabel = computed(() =>
+  hasSubscriptionId.value
+    ? `Editar ${displayName.value}`
+    : `Editar ${displayName.value} indisponivel`,
+);
+
+const archiveActionLabel = computed(() =>
+  canArchive.value
+    ? `Arquivar ${displayName.value}`
+    : `${displayName.value} ja esta arquivada`,
+);
+
+const endActionLabel = computed(() =>
+  canEnd.value
+    ? `Encerrar ${displayName.value}`
+    : `${displayName.value} ja esta encerrada`,
 );
 
 watch(logoUrl, () => {
@@ -250,6 +291,15 @@ function normalizeBrandColor(value) {
     ? colorWithHash
     : SERVICE_BRAND_FALLBACK.color;
 }
+
+function createSafeId(value) {
+  return (
+    normalizeText(value, 'local')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'local'
+  );
+}
 </script>
 
 <template>
@@ -258,7 +308,8 @@ function normalizeBrandColor(value) {
     :class="{ 'subscription-card--trial-warning': isTrialWarning }"
     :style="cardStyle"
     role="listitem"
-    :aria-label="`${displayName}, ${statusLabel}`"
+    :aria-labelledby="`${cardTitleId} ${cardStatusId}`"
+    :aria-describedby="cardDescriptionIds"
   >
     <div class="subscription-card__brand">
       <div
@@ -269,7 +320,7 @@ function normalizeBrandColor(value) {
           v-if="canShowLogo"
           class="subscription-card__logo"
           :src="logoUrl"
-          :alt="`${displayName} logo`"
+          alt=""
           @error="handleLogoError"
         >
         <span
@@ -280,7 +331,10 @@ function normalizeBrandColor(value) {
         </span>
       </div>
 
-      <StatusBadge :tone="statusTone">
+      <StatusBadge
+        :id="cardStatusId"
+        :tone="statusTone"
+      >
         {{ statusLabel }}
       </StatusBadge>
     </div>
@@ -289,16 +343,23 @@ function normalizeBrandColor(value) {
       <div class="subscription-card__title-group">
         <p
           v-if="isTrialWarning"
+          :id="cardWarningId"
           class="subscription-card__warning"
         >
           Trial perto do fim
         </p>
-        <h3 class="subscription-card__title">
+        <h3
+          :id="cardTitleId"
+          class="subscription-card__title"
+        >
           {{ displayName }}
         </h3>
       </div>
 
-      <div class="subscription-card__price">
+      <div
+        :id="cardPriceId"
+        class="subscription-card__price"
+      >
         <span class="subscription-card__price-value">
           {{ priceValue }}
         </span>
@@ -308,31 +369,34 @@ function normalizeBrandColor(value) {
       </div>
     </div>
 
-    <footer class="subscription-card__footer">
-      <span class="subscription-card__date-label">
+    <dl
+      :id="cardDateId"
+      class="subscription-card__footer"
+    >
+      <dt class="subscription-card__date-label">
         {{ relevantDate.label }}
-      </span>
-      <span class="subscription-card__date-value">
+      </dt>
+      <dd class="subscription-card__date-value">
         {{ relevantDate.value }}
-      </span>
-      <span
+      </dd>
+      <dd
         v-if="relevantDate.detail"
         class="subscription-card__date-detail"
       >
         {{ relevantDate.detail }}
-      </span>
-    </footer>
+      </dd>
+    </dl>
 
     <div
       class="subscription-card__actions"
-      aria-label="Acoes da assinatura"
+      :aria-label="`Acoes de ${displayName}`"
     >
       <BaseButton
         class="subscription-card__action"
         data-test="edit-subscription"
         type="button"
         variant="secondary"
-        :aria-label="`Editar ${displayName}`"
+        :aria-label="editActionLabel"
         :disabled="actionsDisabled || !hasSubscriptionId"
         @click="emitEdit"
       >
@@ -343,7 +407,7 @@ function normalizeBrandColor(value) {
         data-test="archive-subscription"
         type="button"
         variant="secondary"
-        :aria-label="`Arquivar ${displayName}`"
+        :aria-label="archiveActionLabel"
         :disabled="actionsDisabled || !canArchive"
         @click="emitArchive"
       >
@@ -354,7 +418,7 @@ function normalizeBrandColor(value) {
         data-test="end-subscription"
         type="button"
         variant="secondary"
-        :aria-label="`Encerrar ${displayName}`"
+        :aria-label="endActionLabel"
         :disabled="actionsDisabled || !canEnd"
         @click="emitEnd"
       >
@@ -506,6 +570,7 @@ function normalizeBrandColor(value) {
   gap: var(--space-2) var(--space-3);
   align-self: end;
   padding-top: var(--space-4);
+  margin: 0;
   border-top: 1px solid var(--border-subtle);
 }
 
@@ -519,6 +584,7 @@ function normalizeBrandColor(value) {
 }
 
 .subscription-card__date-value {
+  margin: 0;
   color: var(--text-primary);
   font-size: var(--font-size-sm);
   font-weight: 900;
@@ -527,8 +593,10 @@ function normalizeBrandColor(value) {
 
 .subscription-card__date-detail {
   grid-column: 1 / -1;
+  margin: 0;
   color: var(--text-secondary);
   text-transform: none;
+  overflow-wrap: anywhere;
 }
 
 .subscription-card__actions {
@@ -554,6 +622,11 @@ function normalizeBrandColor(value) {
 
   .subscription-card__date-value {
     text-align: left;
+  }
+
+  .subscription-card__actions,
+  .subscription-card__action {
+    width: 100%;
   }
 }
 </style>

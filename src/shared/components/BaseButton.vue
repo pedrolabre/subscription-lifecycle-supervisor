@@ -27,10 +27,14 @@ defineProps({
 .base-button {
   display: inline-flex;
   min-width: 0;
+  max-width: 100%;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  white-space: nowrap;
+  line-height: var(--line-tight);
+  overflow-wrap: anywhere;
+  text-align: center;
+  white-space: normal;
 }
 
 .base-button--primary {

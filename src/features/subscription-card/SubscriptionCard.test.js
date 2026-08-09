@@ -32,9 +32,16 @@ describe('SubscriptionCard', () => {
     expect(wrapper.get('.subscription-card__logo').attributes('src')).toBe(
       '/assets/logos/spotify.svg',
     );
-    expect(wrapper.get('.subscription-card__logo').attributes('alt')).toBe(
-      'Spotify Premium logo',
+    expect(wrapper.get('.subscription-card__logo').attributes('alt')).toBe('');
+    expect(wrapper.attributes('aria-labelledby')).toBe(
+      'subscription-card-subscription-local-title subscription-card-subscription-local-status',
     );
+    expect(wrapper.attributes('aria-describedby')).toContain(
+      'subscription-card-subscription-local-price',
+    );
+    expect(
+      wrapper.get('.subscription-card__actions').attributes('aria-label'),
+    ).toBe('Acoes de Spotify Premium');
   });
 
   it('renders yearly paid subscriptions with the yearly cycle', () => {
@@ -148,8 +155,18 @@ describe('SubscriptionCard', () => {
       ),
     ).toBeDefined();
     expect(
+      archivedWrapper.get('[data-test="archive-subscription"]').attributes(
+        'aria-label',
+      ),
+    ).toBe('Local Subscription ja esta arquivada');
+    expect(
       endedWrapper.get('[data-test="end-subscription"]').attributes('disabled'),
     ).toBeDefined();
+    expect(
+      endedWrapper.get('[data-test="end-subscription"]').attributes(
+        'aria-label',
+      ),
+    ).toBe('Local Subscription ja esta encerrada');
     expect(
       blockedWrapper.get('[data-test="edit-subscription"]').attributes(
         'disabled',
