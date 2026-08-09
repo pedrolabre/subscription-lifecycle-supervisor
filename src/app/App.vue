@@ -203,14 +203,17 @@ function openSubscriptionForm() {
 }
 
 function openEditSubscriptionForm(subscription) {
-  if (!resolveSubscriptionId(subscription)) {
+  const subscriptionId = resolveSubscriptionId(subscription);
+
+  if (!subscriptionId) {
     subscriptionActionError.value = createLocalMutationError(
       'Assinatura local sem identificador para edicao.',
     );
     return;
   }
 
-  editingSubscription.value = subscription;
+  editingSubscription.value =
+    resolvePersistedSubscription(subscriptionId) ?? subscription;
   isSubscriptionFormOpen.value = true;
   clearSubscriptionFormError();
   clearSubscriptionActionError();
@@ -341,6 +344,18 @@ function resolveSubscriptionId(subscription) {
   const id = subscription?.id;
 
   return typeof id === 'string' && id.trim() ? id.trim() : '';
+}
+
+function resolvePersistedSubscription(subscriptionId) {
+  const subscriptions = Array.isArray(subscriptionsStore.subscriptions)
+    ? subscriptionsStore.subscriptions
+    : [];
+
+  return (
+    subscriptions.find(
+      (subscription) => resolveSubscriptionId(subscription) === subscriptionId,
+    ) ?? null
+  );
 }
 
 function normalizeMutationError(cause, fallbackMessage) {

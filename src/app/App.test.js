@@ -339,6 +339,74 @@ describe('App', () => {
     expect(wrapper.get('[role="list"]').text()).toContain('Google One');
   });
 
+  it('edits the persisted store record instead of summary-only catalog metadata', async () => {
+    const persistedFreeform = createSubscription({
+      brandColor: null,
+      category: null,
+      icon: null,
+      id: 'sub_spotify_freeform',
+      serviceId: null,
+      serviceName: 'Spotify Premium',
+    });
+    const enrichedSummaryItem = createSubscription({
+      ...persistedFreeform,
+      brandColor: '#1db954',
+      category: 'music',
+      icon: '/assets/logos/spotify.svg',
+      serviceId: 'spotify',
+    });
+    const store = createStore({
+      activeCount: 1,
+      hasSubscriptions: true,
+      isLoaded: true,
+      monthlyTotal: 29.9,
+      status: storeStatus.LOADED,
+      subscriptions: [persistedFreeform],
+      summary: {
+        items: [enrichedSummaryItem],
+      },
+      yearlyProjection: 358.8,
+    });
+    store.update = vi.fn(async (id, payload) => {
+      const updated = createSubscription({
+        ...payload,
+        id,
+      });
+
+      store.subscriptions = [updated];
+      store.summary = {
+        items: [updated],
+      };
+
+      return updated;
+    });
+    const wrapper = mountApp(store);
+
+    expect(wrapper.get('[role="list"]').text()).toContain('Spotify Premium');
+
+    await wrapper.get('[data-test="edit-subscription"]').trigger('click');
+
+    expect(wrapper.get('[data-test="service-catalog-select"]').element.value).toBe(
+      '',
+    );
+
+    await wrapper.get('[data-test="price"]').setValue('35,50');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(store.update).toHaveBeenCalledWith(
+      'sub_spotify_freeform',
+      expect.objectContaining({
+        brandColor: '#64748b',
+        category: 'other',
+        icon: '/assets/logos/service-fallback.svg',
+        price: 35.5,
+        serviceId: null,
+        serviceName: 'Spotify Premium',
+      }),
+    );
+  });
+
   it('archives a persisted subscription and refreshes totals from the store', async () => {
     const initial = createSubscription({
       id: 'sub_spotify',

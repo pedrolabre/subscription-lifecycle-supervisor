@@ -10,6 +10,7 @@ import {
   SUBSCRIPTIONS_STORE_ERROR_CODES,
   SUBSCRIPTIONS_STORE_STATUS,
 } from './index.js';
+import { createSubscriptionsRepository } from '../../infrastructure/subscriptions/index.js';
 
 describe('subscriptions store', () => {
   beforeEach(() => {
@@ -369,6 +370,138 @@ describe('subscriptions store', () => {
       }),
     ]);
   });
+
+  it('keeps the MVP lifecycle consistent through repository-backed local state', async () => {
+    const table = createSubscriptionsTable();
+    const repository = createSubscriptionsRepository({
+      table,
+      createId: createIdSequence([
+        'sub_spotify',
+        'sub_trial',
+        'sub_education',
+      ]),
+      now: createNowSequence([
+        '2026-08-03T12:00:00.000Z',
+        '2026-08-03T12:01:00.000Z',
+        '2026-08-03T12:02:00.000Z',
+        '2026-08-03T12:03:00.000Z',
+        '2026-08-03T12:04:00.000Z',
+        '2026-08-03T12:05:00.000Z',
+      ]),
+    });
+    const store = createTestStore({
+      repository,
+      summaryOptions: {
+        referenceDate: '2026-08-03',
+      },
+    })();
+
+    await expect(store.load()).resolves.toEqual([]);
+
+    expect(store.isEmpty).toBe(true);
+    expect(store.status).toBe(SUBSCRIPTIONS_STORE_STATUS.EMPTY);
+
+    await store.create({
+      serviceName: 'Spotify',
+      serviceId: 'spotify',
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      type: SUBSCRIPTION_TYPES.PAID,
+      billingCycle: BILLING_CYCLES.MONTHLY,
+      price: '29,90',
+      startDate: '2026-08-01',
+      renewalDate: '2026-09-01',
+      brandColor: '#1db954',
+      category: 'music',
+      icon: '/assets/logos/spotify.svg',
+    });
+    await store.create({
+      serviceName: 'Servico Livre Trial',
+      status: SUBSCRIPTION_STATUS.TRIAL,
+      type: SUBSCRIPTION_TYPES.FREE,
+      billingCycle: BILLING_CYCLES.NONE,
+      price: 0,
+      startDate: '2026-08-01',
+      trialEndDate: '2026-08-07',
+    });
+    await store.create({
+      serviceName: 'GitHub Student',
+      serviceId: 'github-pro',
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      type: SUBSCRIPTION_TYPES.EDUCATIONAL,
+      billingCycle: BILLING_CYCLES.NONE,
+      price: 0,
+      startDate: '2026-08-01',
+      brandColor: '#24292f',
+      category: 'development',
+      icon: '/assets/logos/github.svg',
+    });
+
+    expect(store.status).toBe(SUBSCRIPTIONS_STORE_STATUS.LOADED);
+    expect(store.monthlyTotal).toBe(29.9);
+    expect(store.yearlyProjection).toBe(358.8);
+    expect(store.trialAlerts).toEqual([
+      expect.objectContaining({
+        id: 'sub_trial',
+        serviceId: null,
+        serviceName: 'Servico Livre Trial',
+        isTrialEndingSoon: true,
+      }),
+    ]);
+
+    await store.update('sub_spotify', {
+      serviceName: 'Google One',
+      serviceId: 'google-one',
+      brandColor: '#4285f4',
+      category: 'cloud',
+      icon: '/assets/logos/google-one.svg',
+      price: '35,50',
+      renewalDate: '2026-10-01',
+    });
+    await store.archive('sub_spotify');
+    await store.end('sub_trial');
+
+    expect(store.monthlyTotal).toBe(0);
+    expect(store.activeCount).toBe(1);
+    expect(store.archivedCount).toBe(1);
+    expect(store.endedCount).toBe(1);
+    expect(store.trialCount).toBe(0);
+    expect(store.summary.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'sub_spotify',
+          serviceId: 'google-one',
+          serviceName: 'Google One',
+          status: SUBSCRIPTION_STATUS.ARCHIVED,
+        }),
+        expect.objectContaining({
+          id: 'sub_trial',
+          serviceName: 'Servico Livre Trial',
+          status: SUBSCRIPTION_STATUS.ENDED,
+        }),
+        expect.objectContaining({
+          id: 'sub_education',
+          serviceId: 'github-pro',
+          serviceName: 'GitHub Student',
+          status: SUBSCRIPTION_STATUS.ACTIVE,
+        }),
+      ]),
+    );
+
+    setActivePinia(createPinia());
+
+    const reloadedStore = createTestStore({
+      repository,
+      summaryOptions: {
+        referenceDate: '2026-08-03',
+      },
+    })();
+
+    await reloadedStore.load();
+
+    expect(reloadedStore.subscriptions).toHaveLength(3);
+    expect(reloadedStore.monthlyTotal).toBe(0);
+    expect(reloadedStore.summary.items).toEqual(store.summary.items);
+  });
 });
 
 function createTestStore(options = {}) {
@@ -439,4 +572,53 @@ function createDeferred() {
     resolve,
     reject,
   };
+}
+
+function createIdSequence(ids) {
+  let index = 0;
+
+  return () => ids[index++] ?? `sub_${index}`;
+}
+
+function createNowSequence(values) {
+  let index = 0;
+
+  return () => values[index++] ?? values.at(-1);
+}
+
+function createSubscriptionsTable(initialRecords = []) {
+  const records = new Map();
+
+  for (const record of initialRecords) {
+    records.set(record.id, cloneRecord(record));
+  }
+
+  return {
+    async toArray() {
+      return [...records.values()].map(cloneRecord);
+    },
+    async get(id) {
+      const record = records.get(id);
+
+      return record ? cloneRecord(record) : undefined;
+    },
+    async add(record) {
+      if (records.has(record.id)) {
+        throw new Error(`Duplicate id: ${record.id}`);
+      }
+
+      records.set(record.id, cloneRecord(record));
+
+      return record.id;
+    },
+    async put(record) {
+      records.set(record.id, cloneRecord(record));
+
+      return record.id;
+    },
+  };
+}
+
+function cloneRecord(record) {
+  return { ...record };
 }
