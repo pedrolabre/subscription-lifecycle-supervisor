@@ -58,7 +58,7 @@ describe('NewSubscriptionForm', () => {
       expect.objectContaining({
         brandColor: '#1db954',
         category: SERVICE_CATEGORIES.MUSIC,
-        icon: '/assets/logos/spotify.svg',
+        icon: 'https://cdn.simpleicons.org/spotify/1DB954',
         serviceId: 'spotify',
         serviceName: 'Spotify',
       }),
@@ -96,7 +96,7 @@ describe('NewSubscriptionForm', () => {
       expect.objectContaining({
         brandColor: '#00a8e1',
         category: SERVICE_CATEGORIES.VIDEO,
-        icon: '/assets/logos/amazon-prime.svg',
+        icon: 'https://cdn.simpleicons.org/primevideo/00A8E1',
         price: 19.9,
         renewalDate: '2026-09-01',
         serviceId: 'amazon-prime',
@@ -248,7 +248,7 @@ describe('NewSubscriptionForm', () => {
       subscription: createSubscription({
         brandColor: '#1db954',
         category: 'music',
-        icon: '/assets/logos/spotify.svg',
+        icon: 'https://cdn.simpleicons.org/spotify/1DB954',
         serviceId: 'spotify',
         serviceName: 'Spotify Premium',
       }),
@@ -273,7 +273,7 @@ describe('NewSubscriptionForm', () => {
         brandColor: '#1db954',
         billingCycle: BILLING_CYCLES.MONTHLY,
         category: 'music',
-        icon: '/assets/logos/spotify.svg',
+        icon: 'https://cdn.simpleicons.org/spotify/1DB954',
         price: 35.5,
         renewalDate: '2026-09-01',
         serviceId: 'spotify',
@@ -290,7 +290,7 @@ describe('NewSubscriptionForm', () => {
       subscription: createSubscription({
         brandColor: '#1db954',
         category: SERVICE_CATEGORIES.MUSIC,
-        icon: '/assets/logos/spotify.svg',
+        icon: 'https://cdn.simpleicons.org/spotify/1DB954',
         serviceId: 'spotify',
         serviceName: 'Spotify Premium',
       }),
