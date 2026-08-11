@@ -16,6 +16,7 @@ import {
   searchServices,
 } from '../../domain/services/index.js';
 import { BaseButton } from '../../shared/components/index.js';
+import { useLocale } from '../../shared/i18n/index.js';
 
 const ACCESS_KINDS = Object.freeze({
   PAID: 'paid',
@@ -29,38 +30,17 @@ const FORM_MODES = Object.freeze({
   EDIT: 'edit',
 });
 
-const accessKindOptions = Object.freeze([
-  {
-    value: ACCESS_KINDS.PAID,
-    label: 'Paga',
-  },
-  {
-    value: ACCESS_KINDS.FREE,
-    label: 'Gratuita',
-  },
-  {
-    value: ACCESS_KINDS.EDUCATIONAL,
-    label: 'Educacional',
-  },
-  {
-    value: ACCESS_KINDS.TRIAL,
-    label: 'Trial',
-  },
+const accessKindValues = Object.freeze([
+  ACCESS_KINDS.PAID,
+  ACCESS_KINDS.FREE,
+  ACCESS_KINDS.EDUCATIONAL,
+  ACCESS_KINDS.TRIAL,
 ]);
 
-const paidBillingOptions = Object.freeze([
-  {
-    value: BILLING_CYCLES.MONTHLY,
-    label: 'Mensal',
-  },
-  {
-    value: BILLING_CYCLES.YEARLY,
-    label: 'Anual',
-  },
-  {
-    value: BILLING_CYCLES.LIFETIME,
-    label: 'Vitalicio',
-  },
+const paidBillingValues = Object.freeze([
+  BILLING_CYCLES.MONTHLY,
+  BILLING_CYCLES.YEARLY,
+  BILLING_CYCLES.LIFETIME,
 ]);
 
 const serviceCatalog = getServiceCatalog();
@@ -103,6 +83,8 @@ const props = defineProps({
 
 const emit = defineEmits(['cancel', 'change', 'submit']);
 
+const { locale, t, translateValidationError } = useLocale();
+
 const form = reactive({
   accessKind: ACCESS_KINDS.PAID,
   billingCycle: BILLING_CYCLES.MONTHLY,
@@ -113,8 +95,8 @@ const form = reactive({
   trialEndDate: '',
 });
 
-const localFieldErrors = ref({});
-const localFormError = ref('');
+const localValidationErrors = ref([]);
+const localFormErrorKey = ref('');
 const selectedServiceId = ref('');
 const hasClearedCatalogSelection = ref(false);
 const errorSummaryRef = ref(null);
@@ -156,21 +138,22 @@ const externalFieldErrors = computed(() =>
 );
 
 const fieldErrors = computed(() => ({
-  ...localFieldErrors.value,
+  ...createFieldErrorMap(localValidationErrors.value),
   ...externalFieldErrors.value,
 }));
 
 const formError = computed(
   () =>
-    localFormError.value || normalizeErrorMessage(resolvedSubmissionError.value),
+    (localFormErrorKey.value ? t(localFormErrorKey.value) : '') ||
+    normalizeErrorMessage(resolvedSubmissionError.value),
 );
 
 const formEyebrow = computed(() =>
-  isEditing.value ? 'Edicao local' : 'Cadastro local',
+  isEditing.value ? t('dialog.editEyebrow') : t('dialog.createEyebrow'),
 );
 
 const formTitle = computed(() =>
-  isEditing.value ? 'Editar assinatura' : 'Nova assinatura',
+  isEditing.value ? t('dialog.editTitle') : t('dialog.createTitle'),
 );
 
 const formDescribedBy = computed(() =>
@@ -179,11 +162,25 @@ const formDescribedBy = computed(() =>
 
 const submitButtonText = computed(() => {
   if (props.isSubmitting) {
-    return isEditing.value ? 'Salvando edicao' : 'Salvando';
+    return isEditing.value ? t('form.submitEditBusy') : t('form.submitCreateBusy');
   }
 
-  return isEditing.value ? 'Salvar edicao' : 'Salvar assinatura';
+  return isEditing.value ? t('form.submitEdit') : t('form.submitCreate');
 });
+
+const accessKindOptions = computed(() =>
+  accessKindValues.map((value) => ({
+    label: t(`form.accessKinds.${value}`),
+    value,
+  })),
+);
+
+const paidBillingOptions = computed(() =>
+  paidBillingValues.map((value) => ({
+    label: t(`billingCycles.${value}`),
+    value,
+  })),
+);
 
 const selectedCatalogService = computed(() =>
   findServiceById(selectedServiceId.value),
@@ -208,8 +205,8 @@ watch(
 watch(
   form,
   () => {
-    localFieldErrors.value = {};
-    localFormError.value = '';
+    localValidationErrors.value = [];
+    localFormErrorKey.value = '';
     emit('change');
   },
   { deep: true },
@@ -247,14 +244,14 @@ function submitForm() {
   const validation = validateSubscriptionPayload(createSubscriptionPayload());
 
   if (!validation.isValid) {
-    localFieldErrors.value = createFieldErrorMap(validation.errors);
-    localFormError.value = 'Revise os campos destacados.';
+    localValidationErrors.value = validation.errors;
+    localFormErrorKey.value = 'form.errors.fixHighlightedFields';
     focusFirstInvalidField(validation.errors);
     return;
   }
 
-  localFieldErrors.value = {};
-  localFormError.value = '';
+  localValidationErrors.value = [];
+  localFormErrorKey.value = '';
   emit('submit', validation.value);
 }
 
@@ -394,8 +391,8 @@ function resetForm() {
   form.trialEndDate = normalizeText(subscription?.trialEndDate);
   selectedServiceId.value = resolveInitialServiceId(subscription);
   hasClearedCatalogSelection.value = false;
-  localFieldErrors.value = {};
-  localFormError.value = '';
+  localValidationErrors.value = [];
+  localFormErrorKey.value = '';
 }
 
 function selectCatalogServiceId(serviceId) {
@@ -447,7 +444,7 @@ function resolveAccessKind(subscription) {
 function resolveBillingCycle(subscription) {
   if (
     isRecord(subscription) &&
-    paidBillingOptions.some((option) => option.value === subscription.billingCycle)
+    paidBillingValues.includes(subscription.billingCycle)
   ) {
     return subscription.billingCycle;
   }
@@ -490,17 +487,21 @@ function formatEditablePrice(value) {
   }
 
   const price = Number(value);
+  const decimalSeparator = locale.value === 'en-US' ? '.' : ',';
 
-  return Number.isFinite(price) ? String(price).replace('.', ',') : '';
+  return Number.isFinite(price)
+    ? String(price).replace('.', decimalSeparator)
+    : '';
 }
 
 function createFieldErrorMap(errors) {
   return errors.reduce((result, error) => {
     const field = normalizeText(error?.field);
     const message = normalizeText(error?.message);
+    const translatedMessage = translateValidationError(error);
 
-    if (field && message && !result[field]) {
-      result[field] = message;
+    if (field && (translatedMessage || message) && !result[field]) {
+      result[field] = translatedMessage || message;
     }
 
     return result;
@@ -571,7 +572,7 @@ function isRecord(value) {
       </p>
 
       <fieldset class="subscription-form__group subscription-form__group--kind">
-        <legend>Tipo</legend>
+        <legend>{{ t('form.fields.type') }}</legend>
         <div class="subscription-form__kind-options">
           <label
             v-for="option in accessKindOptions"
@@ -598,7 +599,7 @@ function isRecord(value) {
       <div class="subscription-form__grid">
         <div class="subscription-form__field subscription-form__field--service">
           <label for="subscription-service-name">
-            Servico
+            {{ t('form.fields.serviceName') }}
           </label>
           <input
             id="subscription-service-name"
@@ -613,7 +614,7 @@ function isRecord(value) {
             :aria-describedby="
               fieldErrors.serviceName ? 'service-name-error' : undefined
             "
-            placeholder="Nome livre"
+            :placeholder="t('form.catalog.freeform')"
           >
           <span
             v-if="fieldErrors.serviceName"
@@ -626,7 +627,7 @@ function isRecord(value) {
           <ul
             v-if="serviceSearchResults.length"
             class="subscription-form__catalog-suggestions"
-            aria-label="Servicos encontrados"
+            :aria-label="t('form.catalog.suggestionsLabel')"
           >
             <li
               v-for="service in serviceSearchResults"
@@ -639,7 +640,7 @@ function isRecord(value) {
                   'subscription-form__catalog-suggestion--selected':
                     isSelectedService(service),
                 }"
-                :aria-label="`Usar ${service.name} do catalogo local`"
+                :aria-label="t('form.catalog.useService', { service: service.name })"
                 :aria-pressed="isSelectedService(service)"
                 data-test="service-catalog-suggestion"
                 type="button"
@@ -658,7 +659,7 @@ function isRecord(value) {
 
         <div class="subscription-form__field subscription-form__field--catalog">
           <label for="subscription-service-catalog">
-            Catalogo
+            {{ t('form.fields.catalog') }}
           </label>
           <div class="subscription-form__catalog-controls">
             <select
@@ -668,7 +669,7 @@ function isRecord(value) {
               @change="selectCatalogServiceId($event.target.value)"
             >
               <option value="">
-                Nome livre
+                {{ t('form.catalog.freeform') }}
               </option>
               <option
                 v-for="service in serviceCatalog"
@@ -685,17 +686,21 @@ function isRecord(value) {
               data-test="clear-service-selection"
               type="button"
               variant="secondary"
-              :aria-label="`Limpar selecao de ${selectedCatalogService.name}`"
+              :aria-label="
+                t('form.catalog.clearSelection', {
+                  service: selectedCatalogService.name,
+                })
+              "
               :disabled="isSubmitting"
               @click="clearCatalogSelection"
             >
-              Limpar
+              {{ t('buttons.clear') }}
             </BaseButton>
           </div>
         </div>
 
         <label class="subscription-form__field subscription-form__field--start">
-          <span>Inicio</span>
+          <span>{{ t('form.fields.startDate') }}</span>
           <input
             ref="startDateInput"
             v-model="form.startDate"
@@ -719,7 +724,7 @@ function isRecord(value) {
           v-if="isPaidAccess"
           class="subscription-form__field subscription-form__field--value"
         >
-          <span>Valor</span>
+          <span>{{ t('form.fields.price') }}</span>
           <input
             ref="priceInput"
             v-model="form.price"
@@ -729,7 +734,7 @@ function isRecord(value) {
             autocomplete="off"
             :aria-invalid="Boolean(fieldErrors.price)"
             :aria-describedby="fieldErrors.price ? 'price-error' : undefined"
-            placeholder="0,00"
+            :placeholder="t('form.pricePlaceholder')"
           >
           <span
             v-if="fieldErrors.price"
@@ -744,7 +749,7 @@ function isRecord(value) {
           v-if="isPaidAccess"
           class="subscription-form__field subscription-form__field--cycle"
         >
-          <span>Ciclo</span>
+          <span>{{ t('form.fields.billingCycle') }}</span>
           <select
             ref="billingCycleSelect"
             v-model="form.billingCycle"
@@ -775,7 +780,7 @@ function isRecord(value) {
           v-if="requiresRenewalDate"
           class="subscription-form__field subscription-form__field--renewal"
         >
-          <span>Renovacao</span>
+          <span>{{ t('form.fields.renewalDate') }}</span>
           <input
             ref="renewalDateInput"
             v-model="form.renewalDate"
@@ -799,7 +804,7 @@ function isRecord(value) {
           v-if="isTrialAccess"
           class="subscription-form__field subscription-form__field--trial-end"
         >
-          <span>Fim do trial</span>
+          <span>{{ t('form.fields.trialEndDate') }}</span>
           <input
             ref="trialEndDateInput"
             v-model="form.trialEndDate"
@@ -828,7 +833,7 @@ function isRecord(value) {
           :disabled="isSubmitting"
           @click="emitCancel"
         >
-          Cancelar
+          {{ t('buttons.cancel') }}
         </BaseButton>
         <BaseButton
           data-test="save-subscription-form"

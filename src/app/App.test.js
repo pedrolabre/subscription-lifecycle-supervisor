@@ -22,6 +22,11 @@ vi.mock('../stores/subscriptions/index.js', () => ({
 describe('App', () => {
   beforeEach(() => {
     useSubscriptionsStoreMock.mockReset();
+    window.localStorage.clear();
+    document.documentElement.classList.remove('theme-dark', 'theme-light');
+    document.documentElement.removeAttribute('data-theme');
+    document.documentElement.removeAttribute('style');
+    document.documentElement.lang = '';
   });
 
   it('renders the operational product shell and starts local loading', () => {
@@ -37,7 +42,9 @@ describe('App', () => {
     ).toBe(true);
     expect(wrapper.get('#summary-title').text()).toBe('Ciclo atual');
     expect(wrapper.get('#subscriptions-title').text()).toBe('Lista local');
-    expect(wrapper.get('button[type="button"]').text()).toBe('Nova assinatura');
+    expect(wrapper.get('[data-test="open-subscription-form"]').text()).toBe(
+      'Nova assinatura',
+    );
     expect(wrapper.get('[role="status"]').text()).toContain(
       'Carregando assinaturas locais',
     );
@@ -46,6 +53,67 @@ describe('App', () => {
     );
     expect(wrapper.text()).toContain('Preparando leitura local');
     expect(store.load).toHaveBeenCalledTimes(1);
+  });
+
+  it('defaults to dark mode and persists light mode without clearing the open form', async () => {
+    const wrapper = mountApp(
+      createStore({
+        isEmpty: true,
+        isLoaded: true,
+        status: storeStatus.EMPTY,
+      }),
+    );
+
+    expect(document.documentElement.classList.contains('theme-dark')).toBe(true);
+    expect(wrapper.get('[data-test="theme-toggle"]').attributes('aria-label')).toBe(
+      'Alternar para modo claro',
+    );
+
+    await wrapper.get('[data-test="open-subscription-form"]').trigger('click');
+    await wrapper.get('[data-test="service-name"]').setValue('Netflix');
+    await wrapper.get('[data-test="theme-toggle"]').trigger('click');
+
+    expect(document.documentElement.classList.contains('theme-light')).toBe(true);
+    expect(window.localStorage.getItem('subscription-lifecycle-supervisor:theme')).toBe(
+      'light',
+    );
+    expect(wrapper.get('[data-test="service-name"]').element.value).toBe(
+      'Netflix',
+    );
+  });
+
+  it('switches to English, persists the preference and keeps form state intact', async () => {
+    const wrapper = mountApp(
+      createStore({
+        isEmpty: true,
+        isLoaded: true,
+        status: storeStatus.EMPTY,
+      }),
+    );
+
+    expect(wrapper.get('[data-test="locale-toggle"]').text()).toBe('EN');
+    expect(wrapper.get('[data-test="locale-toggle"]').attributes('aria-label')).toBe(
+      'Alternar idioma para ingles',
+    );
+
+    await wrapper.get('[data-test="open-subscription-form"]').trigger('click');
+    await wrapper.get('[data-test="service-name"]').setValue('Figma Trial');
+    await wrapper.get('[data-test="locale-toggle"]').trigger('click');
+
+    expect(document.documentElement.lang).toBe('en-US');
+    expect(window.localStorage.getItem('subscription-lifecycle-supervisor:locale')).toBe(
+      'en-US',
+    );
+    expect(wrapper.get('[data-test="locale-toggle"]').text()).toBe('PT');
+    expect(wrapper.get('[data-test="open-subscription-form"]').text()).toBe(
+      'New subscription',
+    );
+    expect(wrapper.get('#new-subscription-title').text()).toBe(
+      'New subscription',
+    );
+    expect(wrapper.get('[data-test="service-name"]').element.value).toBe(
+      'Figma Trial',
+    );
   });
 
   it('renders the empty subscriptions state after a successful empty load', () => {

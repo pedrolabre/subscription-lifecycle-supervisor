@@ -1,6 +1,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { BaseButton } from '../../shared/components/index.js';
+import { useLocale } from '../../shared/i18n/index.js';
 
 const props = defineProps({
   eyebrow: {
@@ -23,6 +24,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 
+const { t } = useLocale();
 const dialogRef = ref(null);
 let restoreFocusElement = null;
 let previousBodyOverflow = '';
@@ -222,7 +224,7 @@ function isFocusableElement(value) {
           data-test="close-subscription-form-dialog"
           type="button"
           variant="secondary"
-          aria-label="Fechar formulario"
+          :aria-label="t('dialog.close')"
           @click="requestClose"
         >
           <span aria-hidden="true">x</span>
@@ -243,7 +245,7 @@ function isFocusableElement(value) {
   align-items: center;
   justify-content: center;
   padding: 1.25rem;
-  background: rgb(0 0 0 / 72%);
+  background: var(--surface-overlay);
 }
 
 .subscription-form-dialog {
