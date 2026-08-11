@@ -29,7 +29,7 @@ describe('service catalog domain', () => {
       name: 'Spotify',
       category: SERVICE_CATEGORIES.MUSIC,
       color: '#1db954',
-      iconPath: '/assets/logos/spotify.svg',
+      iconPath: 'https://cdn.simpleicons.org/spotify/1DB954',
       defaultBillingCycle: BILLING_CYCLES.MONTHLY,
     });
   });

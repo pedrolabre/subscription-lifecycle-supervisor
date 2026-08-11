@@ -60,14 +60,14 @@ describe('subscription domain summary integration', () => {
       serviceId: 'spotify',
       category: SERVICE_CATEGORIES.MUSIC,
       brandColor: '#1db954',
-      icon: '/assets/logos/spotify.svg',
+      icon: 'https://cdn.simpleicons.org/spotify/1DB954',
       monthlyCost: 29.9,
     });
     expect(github).toMatchObject({
       serviceId: 'github-pro',
       category: SERVICE_CATEGORIES.DEVELOPMENT,
       brandColor: '#24292f',
-      icon: '/assets/logos/github.svg',
+      icon: 'https://cdn.simpleicons.org/github/24292F',
       monthlyCost: 0,
     });
     expect(custom).toMatchObject({
