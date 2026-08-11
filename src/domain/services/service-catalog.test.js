@@ -20,7 +20,7 @@ describe('service catalog domain', () => {
     const spotify = findServiceById('spotify');
 
     expect(catalog).toBe(SERVICE_CATALOG);
-    expect(catalog).toHaveLength(12);
+    expect(catalog).toHaveLength(24);
     expect(Object.isFrozen(catalog)).toBe(true);
     expect(Object.isFrozen(spotify)).toBe(true);
     expect(Object.isFrozen(spotify.aliases)).toBe(true);
@@ -36,6 +36,9 @@ describe('service catalog domain', () => {
 
   it('looks up services by normalized id', () => {
     expect(findServiceById(' GITHUB-PRO ')?.name).toBe('GitHub Pro');
+    expect(findServiceById('CHATGPT')?.name).toBe('ChatGPT');
+    expect(findServiceById('claude')?.name).toBe('Claude');
+    expect(findServiceById('perplexity')?.name).toBe('Perplexity');
     expect(findServiceById('unknown-service')).toBeNull();
   });
 
@@ -43,6 +46,9 @@ describe('service catalog domain', () => {
     expect(findServiceByName(' youtube premium ')?.id).toBe('youtube-premium');
     expect(findService('Spotify Premium')?.id).toBe('spotify');
     expect(findService('youtube sem anuncios')?.id).toBe('youtube-premium');
+    expect(findService('chatgpt plus')?.id).toBe('chatgpt');
+    expect(findService('claude sonnet')?.id).toBe('claude');
+    expect(findService('perplexity pro')?.id).toBe('perplexity');
   });
 
   it('normalizes text for case, accents, punctuation and spacing', () => {

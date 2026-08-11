@@ -578,6 +578,8 @@ describe('App', () => {
 
     await wrapper.get('[data-test="archive-subscription"]').trigger('click');
     await flushPromises();
+    await wrapper.get('[data-test="submit-confirm-dialog"]').trigger('click');
+    await flushPromises();
 
     expect(store.archive).toHaveBeenCalledWith('sub_spotify');
     expect(wrapper.get('.summary-grid').text()).toContain('0,00');
@@ -623,6 +625,8 @@ describe('App', () => {
 
     await wrapper.get('[data-test="end-subscription"]').trigger('click');
     await flushPromises();
+    await wrapper.get('[data-test="submit-confirm-dialog"]').trigger('click');
+    await flushPromises();
 
     expect(store.end).toHaveBeenCalledWith('sub_figma');
     expect(wrapper.get('.summary-grid').text()).toContain('Encerradas');
@@ -656,6 +660,8 @@ describe('App', () => {
     const wrapper = mountApp(store);
 
     await wrapper.get('[data-test="archive-subscription"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('[data-test="submit-confirm-dialog"]').trigger('click');
     await flushPromises();
 
     expect(store.archive).toHaveBeenCalledWith('sub_spotify');
@@ -707,6 +713,51 @@ describe('App', () => {
     expect(wrapper.find('[role="alert"]').text()).not.toContain(
       'Nao foi possivel carregar as assinaturas',
     );
+  });
+
+  it('allows undoing an archived subscription via the toast notification banner', async () => {
+    const initial = createSubscription({
+      id: 'sub_spotify',
+      price: 29.9,
+      serviceName: 'Spotify Premium',
+      status: 'active',
+    });
+    const store = createStore({
+      activeCount: 1,
+      hasSubscriptions: true,
+      isLoaded: true,
+      status: storeStatus.LOADED,
+      subscriptions: [initial],
+      summary: {
+        items: [initial],
+      },
+    });
+    store.archive = vi.fn(async () => {
+      initial.status = 'archived';
+
+      return initial;
+    });
+    store.update = vi.fn(async (id, changes) => {
+      initial.status = changes.status;
+
+      return initial;
+    });
+    const wrapper = mountApp(store);
+
+    await wrapper.get('[data-test="archive-subscription"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('[data-test="submit-confirm-dialog"]').trigger('click');
+    await flushPromises();
+
+    expect(store.archive).toHaveBeenCalledWith('sub_spotify');
+    expect(wrapper.find('[data-test="undo-toast"]').exists()).toBe(true);
+
+    await wrapper.get('[data-test="undo-toast-action"]').trigger('click');
+    await flushPromises();
+
+    expect(store.update).toHaveBeenCalledWith('sub_spotify', {
+      status: 'active',
+    });
   });
 });
 

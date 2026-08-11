@@ -27,16 +27,18 @@ export const messages = Object.freeze({
       edit: 'Editar',
       end: 'Encerrar',
       retry: 'Tentar novamente',
+      unarchive: 'Desarquivar',
     },
     card: {
       actionArchive: 'Arquivar {name}',
       actionArchiveUnavailable: '{name} ja esta arquivada',
       actionEdit: 'Editar {name}',
-      actionEditUnavailable: 'Editar {name} indisponivel',
+      actionEditUnavailable: 'Edicao de {name} indisponivel',
       actionEnd: 'Encerrar {name}',
       actionEndUnavailable: '{name} ja esta encerrada',
+      actionUnarchive: 'Desarquivar {name}',
       actionsLabel: 'Acoes de {name}',
-      cycleFallback: 'ciclo local',
+      cycleFallback: 'controle local',
       cycleLifetime: 'vitalicio',
       cycleMonthly: '/ mes',
       cycleYearly: '/ ano',
@@ -51,6 +53,7 @@ export const messages = Object.freeze({
     },
     dates: {
       labels: {
+        educationalEnd: 'Termino',
         renewal: 'Renovacao',
         start: 'Inicio',
         status: 'Status',
@@ -67,6 +70,25 @@ export const messages = Object.freeze({
         },
         today: 'hoje',
       },
+    },
+    confirmDialog: {
+      archiveConfirm: 'Arquivar',
+      archiveMessage: 'Tem certeza que deseja arquivar "{name}"?',
+      archiveTitle: 'Arquivar assinatura',
+      cancel: 'Cancelar',
+      endConfirm: 'Encerrar',
+      endMessage: 'Tem certeza que deseja encerrar "{name}"?',
+      endTitle: 'Encerrar assinatura',
+      unarchiveConfirm: 'Desarquivar',
+      unarchiveMessage: 'Tem certeza que deseja desarquivar "{name}"?',
+      unarchiveTitle: 'Desarquivar assinatura',
+    },
+    toast: {
+      archived: 'Assinatura "{name}" arquivada.',
+      ended: 'Assinatura "{name}" encerrada.',
+      unarchived: 'Assinatura "{name}" desarquivada.',
+      undo: 'Desfazer',
+      undone: 'Arquivamento desfeito.',
     },
     dialog: {
       close: 'Fechar formulario',
@@ -106,6 +128,7 @@ export const messages = Object.freeze({
       fields: {
         billingCycle: 'Ciclo',
         catalog: 'Catalogo',
+        educationalEndDate: 'Termino',
         price: 'Valor',
         renewalDate: 'Renovacao',
         serviceName: 'Servico',
@@ -201,6 +224,8 @@ export const messages = Object.freeze({
     validationErrors: {
       billing_cycle_invalid: 'Ciclo de cobranca invalido.',
       brand_color_invalid: 'A cor da marca deve ser hexadecimal.',
+      educational_end_date_required:
+        'Informe a data de termino do acesso educacional.',
       non_paid_billing_cycle_invalid:
         'Assinaturas gratuitas ou educacionais devem usar ciclo sem cobranca.',
       non_paid_price_invalid:
@@ -250,6 +275,7 @@ export const messages = Object.freeze({
       edit: 'Edit',
       end: 'End',
       retry: 'Try again',
+      unarchive: 'Unarchive',
     },
     card: {
       actionArchive: 'Archive {name}',
@@ -258,6 +284,7 @@ export const messages = Object.freeze({
       actionEditUnavailable: 'Edit {name} unavailable',
       actionEnd: 'End {name}',
       actionEndUnavailable: '{name} is already ended',
+      actionUnarchive: 'Unarchive {name}',
       actionsLabel: 'Actions for {name}',
       cycleFallback: 'local cycle',
       cycleLifetime: 'lifetime',
@@ -274,6 +301,7 @@ export const messages = Object.freeze({
     },
     dates: {
       labels: {
+        educationalEnd: 'End date',
         renewal: 'Renewal',
         start: 'Start',
         status: 'Status',
@@ -290,6 +318,25 @@ export const messages = Object.freeze({
         },
         today: 'today',
       },
+    },
+    confirmDialog: {
+      archiveConfirm: 'Archive',
+      archiveMessage: 'Are you sure you want to archive "{name}"?',
+      archiveTitle: 'Archive subscription',
+      cancel: 'Cancel',
+      endConfirm: 'End',
+      endMessage: 'Are you sure you want to end "{name}"?',
+      endTitle: 'End subscription',
+      unarchiveConfirm: 'Unarchive',
+      unarchiveMessage: 'Are you sure you want to unarchive "{name}"?',
+      unarchiveTitle: 'Unarchive subscription',
+    },
+    toast: {
+      archived: 'Subscription "{name}" archived.',
+      ended: 'Subscription "{name}" ended.',
+      unarchived: 'Subscription "{name}" unarchived.',
+      undo: 'Undo',
+      undone: 'Archiving undone.',
     },
     dialog: {
       close: 'Close form',
@@ -327,6 +374,7 @@ export const messages = Object.freeze({
       fields: {
         billingCycle: 'Cycle',
         catalog: 'Catalog',
+        educationalEndDate: 'End date',
         price: 'Amount',
         renewalDate: 'Renewal',
         serviceName: 'Service',
@@ -422,6 +470,8 @@ export const messages = Object.freeze({
     validationErrors: {
       billing_cycle_invalid: 'Invalid billing cycle.',
       brand_color_invalid: 'Brand color must be hexadecimal.',
+      educational_end_date_required:
+        'Enter the educational access end date.',
       non_paid_billing_cycle_invalid:
         'Free or educational subscriptions must use the no-billing cycle.',
       non_paid_price_invalid:
