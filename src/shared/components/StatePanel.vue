@@ -57,11 +57,12 @@ function emitAction() {
 <style scoped>
 .state-panel {
   display: grid;
-  min-height: 18rem;
+  min-height: 10.625rem;
   place-items: center;
   align-content: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   padding: var(--space-7) var(--space-5);
+  background: var(--surface-base);
   text-align: center;
 }
 
@@ -69,6 +70,7 @@ function emitAction() {
   margin: 0;
   color: var(--text-primary);
   font-size: var(--font-size-lg);
+  font-weight: 700;
   line-height: var(--line-tight);
   letter-spacing: 0;
 }
@@ -77,17 +79,20 @@ function emitAction() {
   max-width: 34rem;
   margin: 0;
   color: var(--text-secondary);
+  font-size: var(--font-size-md);
+  line-height: var(--line-normal);
 }
 
 .state-panel .state-panel__eyebrow {
   color: var(--text-accent);
   font-size: var(--font-size-xs);
-  font-weight: 800;
-  letter-spacing: 0;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
 .state-panel--error {
+  border: 1px solid var(--status-ended-border);
   background: var(--status-ended-surface);
 }
 

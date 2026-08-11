@@ -24,13 +24,16 @@ defineProps({
   width: fit-content;
   min-height: var(--control-height-sm);
   align-items: center;
+  justify-content: center;
   padding: 0 var(--space-3);
   border: 1px solid var(--status-info-border);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   color: var(--text-primary);
   background: var(--status-info-surface);
-  font-size: var(--font-size-sm);
-  font-weight: 800;
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .status-badge--active {
