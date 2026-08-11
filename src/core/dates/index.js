@@ -66,12 +66,20 @@ function getUtcDateTimestamp(value) {
   }
 
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    const isoDate = value.toISOString().slice(0, 10);
+    const isoDate = [
+      value.getFullYear(),
+      padDatePart(value.getMonth() + 1),
+      padDatePart(value.getDate()),
+    ].join('-');
 
-    return parseIsoDate(isoDate).getTime();
+    return parseIsoDate(isoDate)?.getTime() ?? null;
   }
 
   return null;
+}
+
+function padDatePart(value) {
+  return String(value).padStart(2, '0');
 }
 
 function normalizeWindowDays(value) {

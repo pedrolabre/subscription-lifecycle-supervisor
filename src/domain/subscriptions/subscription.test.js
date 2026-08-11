@@ -8,6 +8,7 @@ import {
   SUBSCRIPTION_TYPES,
   SUBSCRIPTION_TYPE_VALUES,
   normalizeSubscriptionPayload,
+  normalizeSubscriptionPrice,
   validateSubscriptionPayload,
 } from './index.js';
 
@@ -64,6 +65,13 @@ describe('subscription domain contract', () => {
       brandColor: '#1db954',
       category: 'music',
     });
+  });
+
+  it('normalizes price strings from pt-BR and decimal formats', () => {
+    expect(normalizeSubscriptionPrice('1.234,56')).toBe(1234.56);
+    expect(normalizeSubscriptionPrice('29,90')).toBe(29.9);
+    expect(normalizeSubscriptionPrice('1000')).toBe(1000);
+    expect(normalizeSubscriptionPrice('29.90')).toBe(29.9);
   });
 
   it('accepts a valid recurring paid subscription', () => {

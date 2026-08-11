@@ -31,9 +31,13 @@ export function createSubscriptionsStore(options = {}) {
     const isLoaded = ref(false);
     const loadError = ref(null);
     const mutationError = ref(null);
+    const summaryReferenceDate = ref(new Date());
 
     const summary = computed(() =>
-      summarizeSubscriptions(subscriptions.value, resolveSummaryOptions(summaryOptions)),
+      summarizeSubscriptions(
+        subscriptions.value,
+        resolveSummaryOptions(summaryOptions, summaryReferenceDate.value),
+      ),
     );
 
     const activeSubscriptions = computed(() =>
@@ -142,6 +146,10 @@ export function createSubscriptionsStore(options = {}) {
       mutationError.value = null;
     }
 
+    function setReferenceDate(referenceDate = new Date()) {
+      summaryReferenceDate.value = referenceDate;
+    }
+
     async function runMutation(operation) {
       clearError();
 
@@ -199,18 +207,27 @@ export function createSubscriptionsStore(options = {}) {
       end,
       reload,
       clearError,
+      setReferenceDate,
     };
   });
 }
 
 export const useSubscriptionsStore = createSubscriptionsStore();
 
-function resolveSummaryOptions(summaryOptions) {
+function resolveSummaryOptions(summaryOptions, referenceDate) {
+  const defaults = { referenceDate };
+
   if (typeof summaryOptions === 'function') {
-    return summaryOptions();
+    return {
+      ...defaults,
+      ...summaryOptions(),
+    };
   }
 
-  return summaryOptions ?? {};
+  return {
+    ...defaults,
+    ...(summaryOptions ?? {}),
+  };
 }
 
 function resolveRecoverableStatus({

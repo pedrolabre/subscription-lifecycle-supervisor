@@ -30,10 +30,18 @@ export function normalizeSubscriptionPrice(value) {
       return 0;
     }
 
-    return Number(text.replace(',', '.'));
+    return Number(normalizeDecimalText(text));
   }
 
   return Number(value);
+}
+
+function normalizeDecimalText(text) {
+  if (text.includes(',')) {
+    return text.replace(/\./g, '').replace(',', '.');
+  }
+
+  return text;
 }
 
 export function normalizeSubscriptionDate(value) {
@@ -91,4 +99,3 @@ function normalizeBrandColor(value) {
 function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
-
