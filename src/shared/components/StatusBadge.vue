@@ -28,7 +28,7 @@ defineProps({
   padding: 0 var(--space-3);
   border: 1px solid var(--status-info-border);
   border-radius: var(--radius-sm);
-  color: var(--text-primary);
+  color: var(--status-info-text);
   background: var(--status-info-surface);
   font-size: var(--font-size-md);
   font-weight: 700;
@@ -38,21 +38,25 @@ defineProps({
 
 .status-badge--active {
   border-color: var(--status-active-border);
+  color: var(--text-primary);
   background: var(--status-active-surface);
 }
 
 .status-badge--archived {
   border-color: var(--status-archived-border);
+  color: var(--text-primary);
   background: var(--status-archived-surface);
 }
 
 .status-badge--ended {
   border-color: var(--status-ended-border);
+  color: var(--text-primary);
   background: var(--status-ended-surface);
 }
 
 .status-badge--trial {
   border-color: var(--status-trial-border);
+  color: var(--text-primary);
   background: var(--status-trial-surface);
 }
 </style>

@@ -7,17 +7,21 @@ import {
 import { formatCurrency } from '../core/money/index.js';
 import {
   BaseButton,
+  LocaleToggle,
   StatePanel,
   StatusBadge,
   SummaryMetric,
+  ThemeToggle,
 } from '../shared/components/index.js';
+import { useLocale } from '../shared/i18n/index.js';
 import { SubscriptionCard } from '../features/subscription-card/index.js';
 import {
   NewSubscriptionForm,
   SubscriptionFormDialog,
 } from '../features/subscription-form/index.js';
 
-const productName = 'Subscription Lifecycle Supervisor';
+const { formatNumber, locale, t, tc } = useLocale();
+const productName = computed(() => t('app.productName'));
 const subscriptionsStore = useSubscriptionsStore();
 const isSubscriptionFormOpen = ref(false);
 const editingSubscription = ref(null);
@@ -30,18 +34,20 @@ let currentDateTimer = null;
 
 syncCurrentDate();
 
-const storeStatusLabels = {
-  [SUBSCRIPTIONS_STORE_STATUS.IDLE]: 'Preparando leitura local',
-  [SUBSCRIPTIONS_STORE_STATUS.LOADING]: 'Carregando dados locais',
-  [SUBSCRIPTIONS_STORE_STATUS.EMPTY]: 'Nenhuma assinatura',
-  [SUBSCRIPTIONS_STORE_STATUS.ERROR]: 'Leitura local indisponivel',
-  [SUBSCRIPTIONS_STORE_STATUS.LOADED]: 'Dados carregados',
+const storeStatusMessageKeys = {
+  [SUBSCRIPTIONS_STORE_STATUS.IDLE]: 'storeStatus.idle',
+  [SUBSCRIPTIONS_STORE_STATUS.LOADING]: 'storeStatus.loading',
+  [SUBSCRIPTIONS_STORE_STATUS.EMPTY]: 'storeStatus.empty',
+  [SUBSCRIPTIONS_STORE_STATUS.ERROR]: 'storeStatus.error',
+  [SUBSCRIPTIONS_STORE_STATUS.LOADED]: 'storeStatus.loaded',
 };
 
 const storeStatusLabel = computed(
   () =>
-    storeStatusLabels[subscriptionsStore.status] ??
-    storeStatusLabels[SUBSCRIPTIONS_STORE_STATUS.IDLE],
+    t(
+      storeStatusMessageKeys[subscriptionsStore.status] ??
+        storeStatusMessageKeys[SUBSCRIPTIONS_STORE_STATUS.IDLE],
+    ),
 );
 
 const isLoadingState = computed(() =>
@@ -76,7 +82,7 @@ const errorMessage = computed(
   () =>
     subscriptionsStore.loadError?.message ??
     subscriptionsStore.error?.message ??
-    'Nao foi possivel ler as assinaturas locais.',
+    t('errors.loadSubscriptions'),
 );
 
 const trialAlerts = computed(() =>
@@ -90,12 +96,7 @@ const trialAlertCount = computed(() => trialAlerts.value.length);
 const hasTrialAlerts = computed(() => trialAlertCount.value > 0);
 
 const trialAlertSummary = computed(
-  () =>
-    `${formatCount(trialAlertCount.value)} ${
-      trialAlertCount.value === 1
-        ? 'trial perto do vencimento'
-        : 'trials perto do vencimento'
-    }`,
+  () => tc('summary.trialAlertSummary', trialAlertCount.value),
 );
 
 const trialAlertDetail = computed(() => {
@@ -104,53 +105,48 @@ const trialAlertDetail = computed(() => {
     .filter(Boolean);
 
   if (names.length === 0) {
-    return 'Revise os acessos temporarios.';
+    return t('summary.trialAlertDetailFallback');
   }
 
-  if (names.length === 1) {
-    return names[0];
+  if (names.length <= 2) {
+    return formatNameList(names);
   }
 
-  if (names.length === 2) {
-    return names.join(' e ');
-  }
-
-  return `${names.slice(0, 2).join(', ')} e mais ${names.length - 2}`;
+  return t('summary.trialMoreNames', {
+    count: formatCount(names.length - 2),
+    names: formatNameList(names.slice(0, 2)),
+  });
 });
 
 const summaryMetrics = computed(() => [
   {
-    label: 'Mensal',
-    value: formatCurrency(subscriptionsStore.monthlyTotal),
-    detail: 'Custo normalizado',
+    label: t('summary.monthly.label'),
+    value: formatCurrency(subscriptionsStore.monthlyTotal, {
+      locale: locale.value,
+    }),
+    detail: t('summary.monthly.detail'),
   },
   {
-    label: 'Anual',
-    value: formatCurrency(subscriptionsStore.yearlyProjection),
-    detail: 'Projecao recorrente',
+    label: t('summary.yearly.label'),
+    value: formatCurrency(subscriptionsStore.yearlyProjection, {
+      locale: locale.value,
+    }),
+    detail: t('summary.yearly.detail'),
   },
   {
-    label: 'Ativas',
+    label: t('summary.active.label'),
     value: formatCount(subscriptionsStore.activeCount),
-    detail: 'Status ativo',
+    detail: t('summary.active.detail'),
   },
   {
-    label: 'Trials',
+    label: t('summary.trials.label'),
     value: formatCount(subscriptionsStore.trialCount),
-    detail: formatCountDetail(
-      trialAlertCount.value,
-      'alerta perto do fim',
-      'alertas perto do fim',
-    ),
+    detail: tc('summary.trialAlertsDetail', trialAlertCount.value),
   },
   {
-    label: 'Encerradas',
+    label: t('summary.ended.label'),
     value: formatCount(subscriptionsStore.endedCount),
-    detail: formatCountDetail(
-      subscriptionsStore.archivedCount,
-      'arquivada',
-      'arquivadas',
-    ),
+    detail: tc('summary.archivedDetail', subscriptionsStore.archivedCount),
   },
 ]);
 
@@ -165,9 +161,7 @@ const subscriptionCards = computed(() => {
 const subscriptionsListLabel = computed(() => {
   const count = subscriptionCards.value.length;
 
-  return `${formatCount(count)} ${
-    count === 1 ? 'assinatura carregada' : 'assinaturas carregadas'
-  }`;
+  return tc('summary.listCount', count);
 });
 
 const subscriptionFormMode = computed(() =>
@@ -175,11 +169,11 @@ const subscriptionFormMode = computed(() =>
 );
 
 const subscriptionDialogEyebrow = computed(() =>
-  editingSubscription.value ? 'Edicao local' : 'Cadastro local',
+  editingSubscription.value ? t('dialog.editEyebrow') : t('dialog.createEyebrow'),
 );
 
 const subscriptionDialogTitle = computed(() =>
-  editingSubscription.value ? 'Editar assinatura' : 'Nova assinatura',
+  editingSubscription.value ? t('dialog.editTitle') : t('dialog.createTitle'),
 );
 
 const subscriptionFormKey = computed(
@@ -192,7 +186,7 @@ const subscriptionFormKey = computed(
 const subscriptionActionErrorMessage = computed(
   () =>
     subscriptionActionError.value?.message ??
-    'Nao foi possivel atualizar a assinatura local.',
+    t('errors.updateSubscription'),
 );
 
 const areCardActionsDisabled = computed(
@@ -249,7 +243,7 @@ function openEditSubscriptionForm(subscription) {
 
   if (!subscriptionId) {
     subscriptionActionError.value = createLocalMutationError(
-      'Assinatura local sem identificador para edicao.',
+      t('errors.missingSubscriptionIdForEdit'),
     );
     return;
   }
@@ -286,7 +280,7 @@ async function submitSubscription(payload) {
 
       if (!subscriptionId) {
         throw createLocalMutationError(
-          'Assinatura local sem identificador para edicao.',
+          t('errors.missingSubscriptionIdForEdit'),
         );
       }
 
@@ -301,7 +295,7 @@ async function submitSubscription(payload) {
       subscriptionsStore.mutationError ??
       normalizeMutationError(
         cause,
-        'Nao foi possivel salvar a assinatura local.',
+        t('errors.saveSubscription'),
       );
   } finally {
     isSubmittingSubscription.value = false;
@@ -312,7 +306,7 @@ async function archiveSubscription(subscription) {
   await runLifecycleMutation(
     subscription,
     'archive',
-    'Nao foi possivel arquivar a assinatura local.',
+    t('errors.archiveSubscription'),
   );
 }
 
@@ -320,7 +314,7 @@ async function endSubscription(subscription) {
   await runLifecycleMutation(
     subscription,
     'end',
-    'Nao foi possivel encerrar a assinatura local.',
+    t('errors.endSubscription'),
   );
 }
 
@@ -333,7 +327,7 @@ async function runLifecycleMutation(subscription, action, fallbackMessage) {
 
   if (!subscriptionId) {
     subscriptionActionError.value = createLocalMutationError(
-      'Assinatura local sem identificador.',
+      t('errors.missingSubscriptionId'),
     );
     return;
   }
@@ -361,13 +355,7 @@ function getSubscriptionKey(subscription, index) {
 }
 
 function formatCount(value) {
-  return String(normalizeCount(value));
-}
-
-function formatCountDetail(value, singular, plural) {
-  const count = normalizeCount(value);
-
-  return `${formatCount(count)} ${count === 1 ? singular : plural}`;
+  return formatNumber(normalizeCount(value));
 }
 
 function normalizeCount(value) {
@@ -380,6 +368,13 @@ function normalizeSubscriptionName(subscription) {
   const name = subscription?.serviceName ?? subscription?.service?.name;
 
   return typeof name === 'string' && name.trim() ? name.trim() : '';
+}
+
+function formatNameList(names) {
+  return new Intl.ListFormat(locale.value, {
+    style: 'long',
+    type: 'conjunction',
+  }).format(names);
 }
 
 function resolveSubscriptionId(subscription) {
@@ -427,7 +422,7 @@ function createLocalMutationError(message) {
     >
       <div class="app-identity">
         <p class="app-context">
-          Painel local
+          {{ t('app.localPanel') }}
         </p>
         <h1 id="app-title">
           {{ productName }}
@@ -436,9 +431,17 @@ function createLocalMutationError(message) {
 
       <div
         class="app-header-actions"
-        aria-label="Acao principal"
+        :aria-label="t('app.headerActionsLabel')"
       >
-        <StatusBadge tone="info">
+        <div class="app-preference-controls">
+          <ThemeToggle />
+          <LocaleToggle />
+        </div>
+
+        <StatusBadge
+          class="app-header-status"
+          tone="info"
+        >
           {{ storeStatusLabel }}
         </StatusBadge>
         <BaseButton
@@ -452,14 +455,14 @@ function createLocalMutationError(message) {
           :disabled="isLoadingState || isSubmittingSubscription"
           @click="openSubscriptionForm"
         >
-          Nova assinatura
+          {{ t('app.primaryAction') }}
         </BaseButton>
       </div>
     </header>
 
     <main
       class="app-main"
-      aria-label="Painel de assinaturas"
+      :aria-label="t('app.dashboardLabel')"
     >
       <div class="dashboard-grid">
         <section
@@ -468,10 +471,10 @@ function createLocalMutationError(message) {
         >
           <div class="section-heading">
             <p class="section-label">
-              Resumo
+              {{ t('summary.eyebrow') }}
             </p>
             <h2 id="summary-title">
-              Ciclo atual
+              {{ t('summary.title') }}
             </h2>
           </div>
 
@@ -511,10 +514,10 @@ function createLocalMutationError(message) {
         >
           <div class="section-heading">
             <p class="section-label">
-              Assinaturas
+              {{ t('summary.subscriptionsEyebrow') }}
             </p>
             <h2 id="subscriptions-title">
-              Lista local
+              {{ t('summary.subscriptionsTitle') }}
             </h2>
           </div>
 
@@ -529,17 +532,17 @@ function createLocalMutationError(message) {
           <div
             class="subscriptions-list-shell"
             :aria-busy="isLoadingState"
-            aria-label="Area da lista de assinaturas"
+            :aria-label="t('aria.subscriptionsListArea')"
             aria-live="polite"
           >
             <div
               v-if="isLoadingState"
               class="loading-state subscription-card-grid"
               role="status"
-              aria-label="Carregando assinaturas locais"
+              :aria-label="t('states.loadingSubscriptions')"
             >
               <span class="sr-only">
-                Carregando assinaturas locais
+                {{ t('states.loadingSubscriptions') }}
               </span>
               <article
                 v-for="cardIndex in 4"
@@ -557,21 +560,21 @@ function createLocalMutationError(message) {
             <StatePanel
               v-else-if="isErrorState"
               :action-label="
-                subscriptionsStore.canRetry ? 'Tentar novamente' : ''
+                subscriptionsStore.canRetry ? t('buttons.retry') : ''
               "
               :description="errorMessage"
-              eyebrow="Leitura local"
+              :eyebrow="t('states.errorEyebrow')"
               role="alert"
-              title="Nao foi possivel carregar as assinaturas"
+              :title="t('states.errorTitle')"
               tone="error"
               @action="retrySubscriptionsLoad"
             />
 
             <StatePanel
               v-else-if="isEmptyState"
-              description="Sua lista local ainda nao tem assinaturas. Os dados aparecerao aqui depois do primeiro cadastro."
-              eyebrow="Lista local"
-              title="Nenhuma assinatura salva"
+              :description="t('states.emptyDescription')"
+              :eyebrow="t('states.emptyEyebrow')"
+              :title="t('states.emptyTitle')"
               tone="empty"
             />
 
@@ -595,9 +598,9 @@ function createLocalMutationError(message) {
 
             <StatePanel
               v-else
-              description="Sua lista local ainda nao tem assinaturas. Os dados aparecerao aqui depois do primeiro cadastro."
-              eyebrow="Lista local"
-              title="Nenhuma assinatura salva"
+              :description="t('states.emptyDescription')"
+              :eyebrow="t('states.emptyEyebrow')"
+              :title="t('states.emptyTitle')"
               tone="empty"
             />
           </div>
@@ -675,6 +678,17 @@ function createLocalMutationError(message) {
 
 .app-header-actions > * {
   max-width: 100%;
+}
+
+.app-preference-controls {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.app-header-status {
+  min-width: 0;
 }
 
 h1,
@@ -800,7 +814,7 @@ h2 {
   background:
     linear-gradient(
       135deg,
-      rgb(117 242 218 / 12%),
+      var(--skeleton-brand-surface),
       var(--surface-base) 45%,
       var(--surface-base) 100%
     );
@@ -812,9 +826,9 @@ h2 {
   background:
     linear-gradient(
       90deg,
-      rgb(245 242 230 / 8%),
-      rgb(245 242 230 / 16%),
-      rgb(245 242 230 / 8%)
+      var(--skeleton-shimmer-start),
+      var(--skeleton-shimmer-mid),
+      var(--skeleton-shimmer-start)
     );
 }
 
@@ -888,7 +902,19 @@ h2 {
     width: 100%;
   }
 
+  .app-header-actions {
+    flex-wrap: wrap;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .app-header-status {
+    flex: 1 1 8rem;
+    justify-content: center;
+  }
+
   .app-primary-action {
+    flex: 1 1 100%;
     justify-content: center;
   }
 }

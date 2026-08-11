@@ -9,6 +9,7 @@ import {
   SUBSCRIPTION_TYPES,
 } from '../../domain/subscriptions/index.js';
 import { BaseButton, StatusBadge } from '../../shared/components/index.js';
+import { useLocale } from '../../shared/i18n/index.js';
 
 const props = defineProps({
   actionsDisabled: {
@@ -27,13 +28,14 @@ const props = defineProps({
 
 const emit = defineEmits(['archive', 'edit', 'end']);
 
+const { formatDate, formatRelativeDays, locale, t } = useLocale();
 const logoFailed = ref(false);
 
-const statusLabels = {
-  [SUBSCRIPTION_STATUS.ACTIVE]: 'Ativa',
-  [SUBSCRIPTION_STATUS.TRIAL]: 'Trial',
-  [SUBSCRIPTION_STATUS.ENDED]: 'Encerrada',
-  [SUBSCRIPTION_STATUS.ARCHIVED]: 'Arquivada',
+const statusMessageKeys = {
+  [SUBSCRIPTION_STATUS.ACTIVE]: 'subscriptionStatus.active',
+  [SUBSCRIPTION_STATUS.TRIAL]: 'subscriptionStatus.trial',
+  [SUBSCRIPTION_STATUS.ENDED]: 'subscriptionStatus.ended',
+  [SUBSCRIPTION_STATUS.ARCHIVED]: 'subscriptionStatus.archived',
 };
 
 const statusTones = {
@@ -43,28 +45,29 @@ const statusTones = {
   [SUBSCRIPTION_STATUS.ARCHIVED]: 'archived',
 };
 
-const typeLabels = {
-  [SUBSCRIPTION_TYPES.FREE]: 'Gratuita',
-  [SUBSCRIPTION_TYPES.EDUCATIONAL]: 'Educacional',
+const typeMessageKeys = {
+  [SUBSCRIPTION_TYPES.FREE]: 'subscriptionTypes.free',
+  [SUBSCRIPTION_TYPES.EDUCATIONAL]: 'subscriptionTypes.educational',
 };
 
-const cycleLabels = {
-  [BILLING_CYCLES.MONTHLY]: '/ mes',
-  [BILLING_CYCLES.YEARLY]: '/ ano',
-  [BILLING_CYCLES.LIFETIME]: 'vitalicio',
+const cycleMessageKeys = {
+  [BILLING_CYCLES.MONTHLY]: 'card.cycleMonthly',
+  [BILLING_CYCLES.YEARLY]: 'card.cycleYearly',
+  [BILLING_CYCLES.LIFETIME]: 'card.cycleLifetime',
 };
 
 const displayName = computed(() =>
   normalizeText(
     props.subscription.serviceName ?? props.subscription.service?.name,
-    'Assinatura local',
+    t('card.fallbackName'),
   ),
 );
 
 const statusLabel = computed(
   () =>
-    statusLabels[props.subscription.status] ??
-    normalizeText(props.subscription.status, 'Status local'),
+    (statusMessageKeys[props.subscription.status]
+      ? t(statusMessageKeys[props.subscription.status])
+      : null) ?? normalizeText(props.subscription.status, t('card.fallbackStatus')),
 );
 
 const statusTone = computed(
@@ -98,22 +101,26 @@ const brandInitial = computed(() => {
 
 const priceValue = computed(() => {
   if (!isPaidSubscription.value) {
-    return 'Sem cobranca';
+    return t('card.noCharge');
   }
 
   const price = Number(props.subscription.price);
 
   return Number.isFinite(price) && price > 0
-    ? formatCurrency(price)
-    : 'Sem valor local';
+    ? formatCurrency(price, { locale: locale.value })
+    : t('card.noLocalValue');
 });
 
 const priceCycle = computed(() => {
   if (isPaidSubscription.value) {
-    return cycleLabels[props.subscription.billingCycle] ?? 'ciclo local';
+    return cycleMessageKeys[props.subscription.billingCycle]
+      ? t(cycleMessageKeys[props.subscription.billingCycle])
+      : t('card.cycleFallback');
   }
 
-  return typeLabels[props.subscription.type] ?? 'Controle local';
+  return typeMessageKeys[props.subscription.type]
+    ? t(typeMessageKeys[props.subscription.type])
+    : t('card.priceFallback');
 });
 
 const relevantDate = computed(() => {
@@ -121,25 +128,34 @@ const relevantDate = computed(() => {
     props.subscription.status === SUBSCRIPTION_STATUS.TRIAL &&
     hasText(props.subscription.trialEndDate)
   ) {
-    return createDateDetail('Fim do trial', props.subscription.trialEndDate);
+    return createDateDetail(
+      t('dates.labels.trialEnd'),
+      props.subscription.trialEndDate,
+    );
   }
 
   if (hasText(props.subscription.renewalDate)) {
-    return createDateDetail('Renovacao', props.subscription.renewalDate);
+    return createDateDetail(
+      t('dates.labels.renewal'),
+      props.subscription.renewalDate,
+    );
   }
 
   if (hasText(props.subscription.trialEndDate)) {
-    return createDateDetail('Fim do trial', props.subscription.trialEndDate);
+    return createDateDetail(
+      t('dates.labels.trialEnd'),
+      props.subscription.trialEndDate,
+    );
   }
 
   if (hasText(props.subscription.startDate)) {
-    return createDateDetail('Inicio', props.subscription.startDate);
+    return createDateDetail(t('dates.labels.start'), props.subscription.startDate);
   }
 
   return {
     detail: '',
-    label: 'Data',
-    value: 'Sem data local',
+    label: t('card.dateFallback'),
+    value: t('card.noLocalDate'),
   };
 });
 
@@ -198,20 +214,20 @@ const canEnd = computed(
 
 const editActionLabel = computed(() =>
   hasSubscriptionId.value
-    ? `Editar ${displayName.value}`
-    : `Editar ${displayName.value} indisponivel`,
+    ? t('card.actionEdit', { name: displayName.value })
+    : t('card.actionEditUnavailable', { name: displayName.value }),
 );
 
 const archiveActionLabel = computed(() =>
   canArchive.value
-    ? `Arquivar ${displayName.value}`
-    : `${displayName.value} ja esta arquivada`,
+    ? t('card.actionArchive', { name: displayName.value })
+    : t('card.actionArchiveUnavailable', { name: displayName.value }),
 );
 
 const endActionLabel = computed(() =>
   canEnd.value
-    ? `Encerrar ${displayName.value}`
-    : `${displayName.value} ja esta encerrada`,
+    ? t('card.actionEnd', { name: displayName.value })
+    : t('card.actionEndUnavailable', { name: displayName.value }),
 );
 
 watch(logoUrl, () => {
@@ -236,43 +252,10 @@ function handleLogoError() {
 
 function createDateDetail(label, value) {
   return {
-    detail: formatDaysDetail(
-      calculateDaysRemaining(value, props.referenceDate),
-    ),
+    detail: formatRelativeDays(calculateDaysRemaining(value, props.referenceDate)),
     label,
-    value: formatLocalDate(value),
+    value: formatDate(value),
   };
-}
-
-function formatDaysDetail(days) {
-  if (days === null) {
-    return '';
-  }
-
-  if (days === 0) {
-    return 'hoje';
-  }
-
-  const absoluteDays = Math.abs(days);
-  const unit = absoluteDays === 1 ? 'dia' : 'dias';
-
-  return days > 0
-    ? `em ${absoluteDays} ${unit}`
-    : `${absoluteDays} ${unit} atras`;
-}
-
-function formatLocalDate(value) {
-  const date = new Date(`${value}T00:00:00`);
-
-  if (Number.isNaN(date.getTime())) {
-    return normalizeText(value, 'Sem data local');
-  }
-
-  return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date);
 }
 
 function normalizeText(value, fallback) {
@@ -346,7 +329,7 @@ function createSafeId(value) {
           :id="cardWarningId"
           class="subscription-card__warning"
         >
-          Trial perto do fim
+          {{ t('card.trialEndingSoon') }}
         </p>
         <h3
           :id="cardTitleId"
@@ -389,7 +372,7 @@ function createSafeId(value) {
 
     <div
       class="subscription-card__actions"
-      :aria-label="`Acoes de ${displayName}`"
+      :aria-label="t('card.actionsLabel', { name: displayName })"
     >
       <BaseButton
         class="subscription-card__action"
@@ -400,7 +383,7 @@ function createSafeId(value) {
         :disabled="actionsDisabled || !hasSubscriptionId"
         @click="emitEdit"
       >
-        Editar
+        {{ t('buttons.edit') }}
       </BaseButton>
       <BaseButton
         class="subscription-card__action"
@@ -411,7 +394,7 @@ function createSafeId(value) {
         :disabled="actionsDisabled || !canArchive"
         @click="emitArchive"
       >
-        Arquivar
+        {{ t('buttons.archive') }}
       </BaseButton>
       <BaseButton
         class="subscription-card__action"
@@ -422,7 +405,7 @@ function createSafeId(value) {
         :disabled="actionsDisabled || !canEnd"
         @click="emitEnd"
       >
-        Encerrar
+        {{ t('buttons.end') }}
       </BaseButton>
     </div>
   </article>
@@ -443,12 +426,12 @@ function createSafeId(value) {
       135deg,
       color-mix(
         in srgb,
-        var(--subscription-brand-color) 19%,
+        var(--subscription-brand-color) var(--subscription-card-brand-start),
         var(--surface-base)
       ) 0%,
       color-mix(
         in srgb,
-        var(--subscription-brand-color) 7%,
+        var(--subscription-brand-color) var(--subscription-card-brand-mid),
         var(--surface-base)
       ) 38%,
       var(--surface-base) 76%
@@ -468,10 +451,14 @@ function createSafeId(value) {
   background:
     linear-gradient(
       135deg,
-      color-mix(in srgb, var(--status-trial) 18%, var(--surface-base)) 0%,
       color-mix(
         in srgb,
-        var(--subscription-brand-color) 7%,
+        var(--status-trial) var(--subscription-card-trial-start),
+        var(--surface-base)
+      ) 0%,
+      color-mix(
+        in srgb,
+        var(--subscription-brand-color) var(--subscription-card-brand-mid),
         var(--surface-base)
       ) 38%,
       var(--surface-base) 76%
