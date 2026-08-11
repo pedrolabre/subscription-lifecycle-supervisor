@@ -4,14 +4,17 @@ import {
   SUBSCRIPTIONS_STORE_STATUS,
   useSubscriptionsStore,
 } from '../stores/subscriptions/index.js';
+import { SUBSCRIPTION_STATUS } from '../domain/subscriptions/index.js';
 import { formatCurrency } from '../core/money/index.js';
 import {
   BaseButton,
+  ConfirmDialog,
   LocaleToggle,
   StatePanel,
   StatusBadge,
   SummaryMetric,
   ThemeToggle,
+  UndoToast,
 } from '../shared/components/index.js';
 import { useLocale } from '../shared/i18n/index.js';
 import { SubscriptionCard } from '../features/subscription-card/index.js';
@@ -302,6 +305,153 @@ async function submitSubscription(payload) {
   }
 }
 
+const confirmDialogState = ref({
+  open: false,
+  title: '',
+  message: '',
+  confirmLabel: '',
+  tone: 'archive',
+  targetSubscription: null,
+  action: null,
+});
+
+const toastState = ref({
+  visible: false,
+  message: '',
+  actionLabel: '',
+  subscriptionId: null,
+  previousStatus: null,
+});
+
+function requestArchiveSubscription(subscription) {
+  const name = normalizeSubscriptionName(subscription) || t('card.fallbackName');
+  const isArchived = subscription?.status === SUBSCRIPTION_STATUS.ARCHIVED;
+
+  if (isArchived) {
+    confirmDialogState.value = {
+      open: true,
+      title: t('confirmDialog.unarchiveTitle'),
+      message: t('confirmDialog.unarchiveMessage', { name }),
+      confirmLabel: t('confirmDialog.unarchiveConfirm'),
+      tone: 'archive',
+      targetSubscription: subscription,
+      action: 'unarchive',
+    };
+    return;
+  }
+
+  confirmDialogState.value = {
+    open: true,
+    title: t('confirmDialog.archiveTitle'),
+    message: t('confirmDialog.archiveMessage', { name }),
+    confirmLabel: t('confirmDialog.archiveConfirm'),
+    tone: 'archive',
+    targetSubscription: subscription,
+    action: 'archive',
+  };
+}
+
+function requestEndSubscription(subscription) {
+  const name = normalizeSubscriptionName(subscription) || t('card.fallbackName');
+
+  confirmDialogState.value = {
+    open: true,
+    title: t('confirmDialog.endTitle'),
+    message: t('confirmDialog.endMessage', { name }),
+    confirmLabel: t('confirmDialog.endConfirm'),
+    tone: 'end',
+    targetSubscription: subscription,
+    action: 'end',
+  };
+}
+
+function closeConfirmDialog() {
+  confirmDialogState.value.open = false;
+}
+
+async function handleConfirmedAction() {
+  const { action, targetSubscription } = confirmDialogState.value;
+  closeConfirmDialog();
+
+  if (!targetSubscription) {
+    return;
+  }
+
+  const subscriptionId = resolveSubscriptionId(targetSubscription);
+  const name = normalizeSubscriptionName(targetSubscription) || t('card.fallbackName');
+  const previousStatus = String(targetSubscription.status || 'active');
+
+  if (action === 'archive') {
+    await archiveSubscription(targetSubscription);
+
+    toastState.value = {
+      visible: true,
+      message: t('toast.archived', { name }),
+      actionLabel: t('toast.undo'),
+      subscriptionId,
+      previousStatus,
+    };
+  } else if (action === 'unarchive') {
+    await subscriptionsStore.update(subscriptionId, {
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+    });
+
+    toastState.value = {
+      visible: true,
+      message: t('toast.unarchived', { name }),
+      actionLabel: '',
+      subscriptionId: null,
+      previousStatus: null,
+    };
+  } else if (action === 'end') {
+    await endSubscription(targetSubscription);
+
+    toastState.value = {
+      visible: true,
+      message: t('toast.ended', { name }),
+      actionLabel: '',
+      subscriptionId: null,
+      previousStatus: null,
+    };
+  }
+}
+
+async function handleUndoToastAction() {
+  const { subscriptionId, previousStatus } = toastState.value;
+  toastState.value.visible = false;
+
+  if (!subscriptionId) {
+    return;
+  }
+
+  try {
+    const targetStatus =
+      previousStatus && previousStatus !== 'archived'
+        ? previousStatus
+        : 'active';
+
+    await subscriptionsStore.update(subscriptionId, {
+      status: targetStatus,
+    });
+
+    toastState.value = {
+      visible: true,
+      message: t('toast.undone'),
+      actionLabel: '',
+      subscriptionId: null,
+      previousStatus: null,
+    };
+  } catch (cause) {
+    subscriptionActionError.value =
+      subscriptionsStore.mutationError ??
+      normalizeMutationError(cause, t('errors.updateSubscription'));
+  }
+}
+
+function dismissToast() {
+  toastState.value.visible = false;
+}
+
 async function archiveSubscription(subscription) {
   await runLifecycleMutation(
     subscription,
@@ -421,9 +571,6 @@ function createLocalMutationError(message) {
       aria-labelledby="app-title"
     >
       <div class="app-identity">
-        <p class="app-context">
-          {{ t('app.localPanel') }}
-        </p>
         <h1 id="app-title">
           {{ productName }}
         </h1>
@@ -590,9 +737,9 @@ function createLocalMutationError(message) {
                 :actions-disabled="areCardActionsDisabled"
                 :reference-date="currentDate"
                 :subscription="subscription"
-                @archive="archiveSubscription"
+                @archive="requestArchiveSubscription"
                 @edit="openEditSubscriptionForm"
-                @end="endSubscription"
+                @end="requestEndSubscription"
               />
             </div>
 
@@ -629,6 +776,25 @@ function createLocalMutationError(message) {
           @submit="submitSubscription"
         />
       </SubscriptionFormDialog>
+
+      <ConfirmDialog
+        :cancel-label="t('confirmDialog.cancel')"
+        :confirm-label="confirmDialogState.confirmLabel"
+        :message="confirmDialogState.message"
+        :open="confirmDialogState.open"
+        :title="confirmDialogState.title"
+        :tone="confirmDialogState.tone"
+        @cancel="closeConfirmDialog"
+        @confirm="handleConfirmedAction"
+      />
+
+      <UndoToast
+        :action-label="toastState.actionLabel"
+        :message="toastState.message"
+        :visible="toastState.visible"
+        @action="handleUndoToastAction"
+        @dismiss="dismissToast"
+      />
     </main>
   </div>
 </template>
@@ -689,6 +855,10 @@ function createLocalMutationError(message) {
 
 .app-header-status {
   min-width: 0;
+  border-color: var(--border-subtle);
+  color: var(--text-muted);
+  background: transparent;
+  font-weight: 500;
 }
 
 h1,

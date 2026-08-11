@@ -6,7 +6,7 @@ import { useLocale } from '../../shared/i18n/index.js';
 const props = defineProps({
   eyebrow: {
     type: String,
-    required: true,
+    default: '',
   },
   open: {
     type: Boolean,
@@ -211,9 +211,6 @@ function isFocusableElement(value) {
     >
       <div class="subscription-form-dialog__header">
         <div class="subscription-form-dialog__heading">
-          <p class="subscription-form-dialog__eyebrow">
-            {{ eyebrow }}
-          </p>
           <h2 :id="titleId">
             {{ title }}
           </h2>

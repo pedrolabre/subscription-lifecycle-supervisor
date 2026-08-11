@@ -69,9 +69,9 @@
   --status-info-border: #35637a;
 
   --focus-color: var(--accent);
-  --focus-outline: 2px solid var(--focus-color);
-  --focus-offset: 2px;
-  --focus-ring: 0 0 0 2px rgb(117 242 218 / 22%);
+  --focus-outline: 1px solid var(--border-focus);
+  --focus-offset: 0px;
+  --focus-ring: 0 0 0 2px rgb(117 242 218 / 14%);
 
   --space-0: 0;
   --space-1: 0.25rem;
@@ -125,7 +125,7 @@
   --surface-inset: #f7f6f1;
   --surface-control: #ecebe5;
   --surface-control-hover: #e4e2da;
-  --surface-control-active: #dff3eb;
+  --surface-control-active: #e8f5f0;
   --surface-disabled: #e7e5dd;
   --surface-overlay: rgb(32 36 33 / 35%);
 
@@ -149,8 +149,8 @@
   --border-danger: rgb(178 56 56 / 48%);
 
   --status-active: #0d7c62;
-  --status-active-surface: #dff3eb;
-  --status-active-border: #76b9a1;
+  --status-active-surface: #e4f2ec;
+  --status-active-border: #8ec3b2;
   --status-trial: #94620a;
   --status-trial-surface: rgb(198 128 18 / 15%);
   --status-trial-border: rgb(168 111 21 / 34%);
@@ -166,7 +166,7 @@
   --status-info-border: #9ec9db;
 
   --focus-color: #087f68;
-  --focus-ring: 0 0 0 2px rgb(8 127 104 / 22%);
+  --focus-ring: 0 0 0 2px rgb(8 127 104 / 14%);
 
   --shadow-soft: 0 12px 32px rgb(23 26 24 / 12%);
   --shadow-raised: 0 20px 60px rgb(32 36 33 / 18%);

@@ -56,6 +56,7 @@ test('covers paid subscription, trial alert, edit, archive and reload persistenc
   await expect(page.locator('.summary-grid')).toContainText('35,50');
 
   await page.getByRole('button', { name: 'Arquivar Google One' }).click();
+  await page.locator('[data-test="submit-confirm-dialog"]').click();
 
   await expect(page.getByRole('listitem', { name: /Google One Arquivada/ })).toBeVisible();
   await expect(page.locator('.summary-grid')).toContainText('0,00');

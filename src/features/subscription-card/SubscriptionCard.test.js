@@ -140,7 +140,7 @@ describe('SubscriptionCard', () => {
     });
   });
 
-  it('disables unavailable or globally blocked actions', () => {
+  it('renders unarchive button for archived subscriptions and disables ended actions', () => {
     const archivedWrapper = mountCard({
       status: SUBSCRIPTION_STATUS.ARCHIVED,
     });
@@ -150,15 +150,18 @@ describe('SubscriptionCard', () => {
     const blockedWrapper = mountCard({}, { actionsDisabled: true });
 
     expect(
-      archivedWrapper.get('[data-test="archive-subscription"]').attributes(
-        'disabled',
-      ),
-    ).toBeDefined();
+      archivedWrapper.get('[data-test="archive-subscription"]').text(),
+    ).toBe('Desarquivar');
     expect(
       archivedWrapper.get('[data-test="archive-subscription"]').attributes(
         'aria-label',
       ),
-    ).toBe('Local Subscription ja esta arquivada');
+    ).toBe('Desarquivar Local Subscription');
+    expect(
+      archivedWrapper.get('[data-test="archive-subscription"]').attributes(
+        'disabled',
+      ),
+    ).toBeUndefined();
     expect(
       endedWrapper.get('[data-test="end-subscription"]').attributes('disabled'),
     ).toBeDefined();

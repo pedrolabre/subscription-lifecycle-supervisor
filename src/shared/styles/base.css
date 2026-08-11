@@ -153,6 +153,8 @@ input:focus,
 textarea:focus,
 select:focus {
   border-color: var(--border-focus);
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 :focus-visible {

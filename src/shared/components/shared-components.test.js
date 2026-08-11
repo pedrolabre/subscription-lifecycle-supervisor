@@ -1,9 +1,11 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import BaseButton from './BaseButton.vue';
+import ConfirmDialog from './ConfirmDialog.vue';
 import StatePanel from './StatePanel.vue';
 import StatusBadge from './StatusBadge.vue';
 import SummaryMetric from './SummaryMetric.vue';
+import UndoToast from './UndoToast.vue';
 
 describe('shared visual primitives', () => {
   it('renders a primary button and keeps native click behavior', async () => {
@@ -77,5 +79,46 @@ describe('shared visual primitives', () => {
     expect(wrapper.get('dt').text()).toBe('Mensal');
     expect(wrapper.get('dd').text()).toBe('--');
     expect(wrapper.text()).toContain('Custo normalizado');
+  });
+
+  it('renders a confirmation dialog and emits confirm and cancel events', async () => {
+    const wrapper = mount(ConfirmDialog, {
+      props: {
+        cancelLabel: 'Cancelar',
+        confirmLabel: 'Arquivar',
+        message: 'Deseja arquivar Spotify Premium?',
+        open: true,
+        title: 'Arquivar assinatura',
+        tone: 'archive',
+      },
+    });
+
+    expect(wrapper.text()).toContain('Arquivar assinatura');
+    expect(wrapper.text()).toContain('Deseja arquivar Spotify Premium?');
+
+    await wrapper.get('[data-test="submit-confirm-dialog"]').trigger('click');
+    expect(wrapper.emitted('confirm')).toHaveLength(1);
+
+    await wrapper.get('[data-test="cancel-confirm-dialog"]').trigger('click');
+    expect(wrapper.emitted('cancel')).toHaveLength(1);
+  });
+
+  it('renders an undo toast banner and handles action and dismiss', async () => {
+    const wrapper = mount(UndoToast, {
+      props: {
+        actionLabel: 'Desfazer',
+        message: 'Assinatura arquivada',
+        visible: true,
+      },
+    });
+
+    expect(wrapper.text()).toContain('Assinatura arquivada');
+    expect(wrapper.text()).toContain('Desfazer');
+
+    await wrapper.get('[data-test="undo-toast-action"]').trigger('click');
+    expect(wrapper.emitted('action')).toHaveLength(1);
+
+    await wrapper.get('[data-test="undo-toast-close"]').trigger('click');
+    expect(wrapper.emitted('dismiss')).toHaveLength(1);
   });
 });

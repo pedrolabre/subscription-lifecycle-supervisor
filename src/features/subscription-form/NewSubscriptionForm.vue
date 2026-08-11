@@ -121,6 +121,9 @@ const isEditing = computed(
 );
 const isPaidAccess = computed(() => form.accessKind === ACCESS_KINDS.PAID);
 const isTrialAccess = computed(() => form.accessKind === ACCESS_KINDS.TRIAL);
+const isEducationalAccess = computed(
+  () => form.accessKind === ACCESS_KINDS.EDUCATIONAL,
+);
 const requiresRenewalDate = computed(
   () =>
     isPaidAccess.value &&
@@ -146,10 +149,6 @@ const formError = computed(
   () =>
     (localFormErrorKey.value ? t(localFormErrorKey.value) : '') ||
     normalizeErrorMessage(resolvedSubmissionError.value),
-);
-
-const formEyebrow = computed(() =>
-  isEditing.value ? t('dialog.editEyebrow') : t('dialog.createEyebrow'),
 );
 
 const formTitle = computed(() =>
@@ -285,7 +284,15 @@ function createSubscriptionPayload() {
   }
 
   if (form.accessKind === ACCESS_KINDS.EDUCATIONAL) {
-    return createNonPaidPayload(basePayload, SUBSCRIPTION_TYPES.EDUCATIONAL);
+    return {
+      ...basePayload,
+      billingCycle: BILLING_CYCLES.NONE,
+      price: 0,
+      renewalDate: null,
+      status: resolvePayloadStatus(),
+      trialEndDate: form.trialEndDate,
+      type: SUBSCRIPTION_TYPES.EDUCATIONAL,
+    };
   }
 
   if (form.accessKind === ACCESS_KINDS.TRIAL) {
@@ -552,9 +559,6 @@ function isRecord(value) {
         v-if="showHeader"
         class="subscription-form__header"
       >
-        <p class="subscription-form__eyebrow">
-          {{ formEyebrow }}
-        </p>
         <h2 :id="titleId">
           {{ formTitle }}
         </h2>
@@ -823,6 +827,30 @@ function isRecord(value) {
             {{ fieldErrors.trialEndDate }}
           </span>
         </label>
+
+        <label
+          v-if="isEducationalAccess"
+          class="subscription-form__field subscription-form__field--educational-end"
+        >
+          <span>{{ t('form.fields.educationalEndDate') }}</span>
+          <input
+            ref="trialEndDateInput"
+            v-model="form.trialEndDate"
+            data-test="educational-end-date"
+            type="date"
+            :aria-invalid="Boolean(fieldErrors.trialEndDate)"
+            :aria-describedby="
+              fieldErrors.trialEndDate ? 'trial-end-date-error' : undefined
+            "
+          >
+          <span
+            v-if="fieldErrors.trialEndDate"
+            id="trial-end-date-error"
+            class="subscription-form__field-error"
+          >
+            {{ fieldErrors.trialEndDate }}
+          </span>
+        </label>
       </div>
 
       <div class="subscription-form__actions">
@@ -877,15 +905,14 @@ function isRecord(value) {
   gap: var(--space-2);
 }
 
-.subscription-form__eyebrow,
 .subscription-form__group legend,
 .subscription-form__field > label:first-child,
 .subscription-form__field > span:first-child {
-  color: var(--text-accent);
-  font-size: var(--font-size-xs);
-  font-weight: 800;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
   letter-spacing: 0;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .subscription-form__eyebrow,
@@ -958,7 +985,7 @@ function isRecord(value) {
 }
 
 .subscription-form__kind-option--selected {
-  border-color: var(--status-active-border);
+  border-color: var(--border-focus);
   color: var(--text-primary);
   background: var(--status-active-surface);
 }
@@ -997,7 +1024,8 @@ function isRecord(value) {
 .subscription-form__field--value,
 .subscription-form__field--cycle,
 .subscription-form__field--renewal,
-.subscription-form__field--trial-end {
+.subscription-form__field--trial-end,
+.subscription-form__field--educational-end {
   grid-column: span 3;
 }
 

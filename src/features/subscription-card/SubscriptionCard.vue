@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { calculateDaysRemaining, isTrialEndingSoon } from '../../core/dates/index.js';
 import { formatCurrency } from '../../core/money/index.js';
-import { SERVICE_BRAND_FALLBACK } from '../../domain/services/index.js';
+import { SERVICE_BRAND_FALLBACK, findService } from '../../domain/services/index.js';
 import {
   BILLING_CYCLES,
   SUBSCRIPTION_STATUS,
@@ -56,6 +56,10 @@ const cycleMessageKeys = {
   [BILLING_CYCLES.LIFETIME]: 'card.cycleLifetime',
 };
 
+const matchedCatalogService = computed(() =>
+  findService(props.subscription.serviceId || props.subscription.serviceName),
+);
+
 const displayName = computed(() =>
   normalizeText(
     props.subscription.serviceName ?? props.subscription.service?.name,
@@ -76,7 +80,9 @@ const statusTone = computed(
 
 const brandColor = computed(() =>
   normalizeBrandColor(
-    props.subscription.brandColor ?? props.subscription.service?.color,
+    props.subscription.brandColor ??
+      props.subscription.service?.color ??
+      matchedCatalogService.value?.color,
   ),
 );
 
@@ -86,7 +92,9 @@ const cardStyle = computed(() => ({
 
 const logoUrl = computed(() =>
   normalizeText(
-    props.subscription.icon ?? props.subscription.service?.iconPath,
+    props.subscription.icon ??
+      props.subscription.service?.iconPath ??
+      matchedCatalogService.value?.iconPath,
     '',
   ),
 );
@@ -134,6 +142,16 @@ const relevantDate = computed(() => {
     );
   }
 
+  if (
+    props.subscription.type === SUBSCRIPTION_TYPES.EDUCATIONAL &&
+    hasText(props.subscription.trialEndDate)
+  ) {
+    return createDateDetail(
+      t('dates.labels.educationalEnd'),
+      props.subscription.trialEndDate,
+    );
+  }
+
   if (hasText(props.subscription.renewalDate)) {
     return createDateDetail(
       t('dates.labels.renewal'),
@@ -157,6 +175,38 @@ const relevantDate = computed(() => {
     label: t('card.dateFallback'),
     value: t('card.noLocalDate'),
   };
+});
+
+const relativeLabelText = computed(() => {
+  const detail = relevantDate.value.detail;
+
+  if (!detail) {
+    return relevantDate.value.label;
+  }
+
+  if (
+    props.subscription.status === SUBSCRIPTION_STATUS.TRIAL &&
+    hasText(props.subscription.trialEndDate)
+  ) {
+    return `${t('dates.labels.trialEnd')} ${detail}`;
+  }
+
+  if (
+    props.subscription.type === SUBSCRIPTION_TYPES.EDUCATIONAL &&
+    hasText(props.subscription.trialEndDate)
+  ) {
+    return `${t('dates.labels.educationalEnd')} ${detail}`;
+  }
+
+  if (hasText(props.subscription.renewalDate)) {
+    return `${t('dates.labels.renewal')} ${detail}`;
+  }
+
+  if (hasText(props.subscription.startDate)) {
+    return `${t('dates.labels.start')} ${detail}`;
+  }
+
+  return `${relevantDate.value.label} ${detail}`;
 });
 
 const isTrialWarning = computed(() => {
@@ -200,11 +250,11 @@ const cardDescriptionIds = computed(() =>
     .join(' '),
 );
 
-const canArchive = computed(
-  () =>
-    hasSubscriptionId.value &&
-    props.subscription.status !== SUBSCRIPTION_STATUS.ARCHIVED,
+const isArchived = computed(
+  () => props.subscription.status === SUBSCRIPTION_STATUS.ARCHIVED,
 );
+
+const canArchive = computed(() => hasSubscriptionId.value);
 
 const canEnd = computed(
   () =>
@@ -218,11 +268,19 @@ const editActionLabel = computed(() =>
     : t('card.actionEditUnavailable', { name: displayName.value }),
 );
 
-const archiveActionLabel = computed(() =>
-  canArchive.value
-    ? t('card.actionArchive', { name: displayName.value })
-    : t('card.actionArchiveUnavailable', { name: displayName.value }),
+const archiveButtonText = computed(() =>
+  isArchived.value ? t('buttons.unarchive') : t('buttons.archive'),
 );
+
+const archiveActionLabel = computed(() => {
+  if (!hasSubscriptionId.value) {
+    return t('card.actionArchiveUnavailable', { name: displayName.value });
+  }
+
+  return isArchived.value
+    ? t('card.actionUnarchive', { name: displayName.value })
+    : t('card.actionArchive', { name: displayName.value });
+});
 
 const endActionLabel = computed(() =>
   canEnd.value
@@ -352,23 +410,17 @@ function createSafeId(value) {
       </div>
     </div>
 
-    <dl
+    <div
       :id="cardDateId"
       class="subscription-card__footer"
     >
-      <dt class="subscription-card__date-label">
-        {{ relevantDate.label }}
-      </dt>
-      <dd class="subscription-card__date-value">
+      <span class="subscription-card__date-relative">
+        {{ relativeLabelText }}
+      </span>
+      <span class="subscription-card__date-value">
         {{ relevantDate.value }}
-      </dd>
-      <dd
-        v-if="relevantDate.detail"
-        class="subscription-card__date-detail"
-      >
-        {{ relevantDate.detail }}
-      </dd>
-    </dl>
+      </span>
+    </div>
 
     <div
       class="subscription-card__actions"
@@ -394,10 +446,10 @@ function createSafeId(value) {
         :disabled="actionsDisabled || !canArchive"
         @click="emitArchive"
       >
-        {{ t('buttons.archive') }}
+        {{ archiveButtonText }}
       </BaseButton>
       <BaseButton
-        class="subscription-card__action"
+        class="subscription-card__action subscription-card__action--end"
         data-test="end-subscription"
         type="button"
         variant="secondary"
@@ -587,47 +639,29 @@ function createSafeId(value) {
 }
 
 .subscription-card__footer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "label value"
-    "detail value";
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
-  align-items: end;
   padding-top: var(--space-2);
   margin: auto 0 0;
   border-top: 1px solid var(--border-subtle);
 }
 
-.subscription-card__date-label,
-.subscription-card__date-detail {
-  color: var(--text-muted);
-  font-size: 0.5rem;
-  font-weight: 800;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-.subscription-card__date-label {
-  grid-area: label;
-  margin-bottom: var(--space-1);
+.subscription-card__date-relative {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .subscription-card__date-value {
-  grid-area: value;
-  margin: 0;
   color: var(--text-primary);
   font-size: var(--font-size-xs);
-  font-weight: 800;
-  text-align: right;
-}
-
-.subscription-card__date-detail {
-  grid-area: detail;
-  margin: var(--space-1) 0 0;
-  color: var(--text-secondary);
-  text-transform: none;
-  overflow-wrap: anywhere;
+  font-weight: 700;
+  flex: 0 0 auto;
 }
 
 .subscription-card__actions {
@@ -643,6 +677,13 @@ function createSafeId(value) {
   padding: 0 var(--space-1);
   font-size: var(--font-size-xs);
   font-weight: 700;
+}
+
+.subscription-card__action--end:hover:not(:disabled),
+.subscription-card__action--end:focus-visible:not(:disabled) {
+  border-color: var(--status-ended-border);
+  color: var(--status-ended);
+  background: var(--status-ended-surface);
 }
 
 @media (max-width: 520px) {

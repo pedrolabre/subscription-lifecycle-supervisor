@@ -61,6 +61,7 @@ export const SUBSCRIPTION_ERROR_CODES = Object.freeze({
   RENEWAL_DATE_INVALID: 'renewal_date_invalid',
   TRIAL_END_DATE_REQUIRED: 'trial_end_date_required',
   TRIAL_END_DATE_INVALID: 'trial_end_date_invalid',
+  EDUCATIONAL_END_DATE_REQUIRED: 'educational_end_date_required',
   BRAND_COLOR_INVALID: 'brand_color_invalid',
 });
 
@@ -98,6 +99,8 @@ export const SUBSCRIPTION_ERROR_MESSAGES = Object.freeze({
     'Informe a data de fim do trial.',
   [SUBSCRIPTION_ERROR_CODES.TRIAL_END_DATE_INVALID]:
     'A data de fim do trial deve estar no formato YYYY-MM-DD.',
+  [SUBSCRIPTION_ERROR_CODES.EDUCATIONAL_END_DATE_REQUIRED]:
+    'Informe a data de termino do acesso educacional.',
   [SUBSCRIPTION_ERROR_CODES.BRAND_COLOR_INVALID]:
     'A cor da marca deve ser hexadecimal.',
 });

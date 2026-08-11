@@ -181,6 +181,8 @@ function validateDates(subscription, errors) {
       SUBSCRIPTION_ERROR_CODES.TRIAL_END_DATE_REQUIRED,
     );
   }
+
+
 }
 
 function validateBrandColor(subscription, errors) {
