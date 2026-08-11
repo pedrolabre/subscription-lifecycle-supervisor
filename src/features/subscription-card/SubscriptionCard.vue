@@ -431,21 +431,28 @@ function createSafeId(value) {
 <style scoped>
 .subscription-card {
   position: relative;
-  display: grid;
-  min-height: 13.5rem;
-  gap: var(--space-5);
+  display: flex;
+  min-height: 11.125rem;
+  flex-direction: column;
   overflow: hidden;
-  padding: var(--space-5);
+  padding: 0.625rem 0.75rem 0.5625rem 0.875rem;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   background:
     linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--subscription-brand-color) 18%, transparent),
-      transparent 42%
-    ),
-    var(--surface-raised);
-  box-shadow: var(--shadow-soft);
+      135deg,
+      color-mix(
+        in srgb,
+        var(--subscription-brand-color) 19%,
+        var(--surface-base)
+      ) 0%,
+      color-mix(
+        in srgb,
+        var(--subscription-brand-color) 7%,
+        var(--surface-base)
+      ) 38%,
+      var(--surface-base) 76%
+    );
 }
 
 .subscription-card::before {
@@ -460,11 +467,15 @@ function createSafeId(value) {
   border-color: var(--status-trial-border);
   background:
     linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--status-trial) 20%, transparent),
-      transparent 46%
-    ),
-    var(--surface-raised);
+      135deg,
+      color-mix(in srgb, var(--status-trial) 18%, var(--surface-base)) 0%,
+      color-mix(
+        in srgb,
+        var(--subscription-brand-color) 7%,
+        var(--surface-base)
+      ) 38%,
+      var(--surface-base) 76%
+    );
 }
 
 .subscription-card__brand,
@@ -475,56 +486,79 @@ function createSafeId(value) {
 
 .subscription-card__brand {
   display: flex;
-  gap: var(--space-3);
+  gap: var(--space-2);
   align-items: center;
   justify-content: space-between;
 }
 
 .subscription-card__mark {
   display: grid;
-  width: 3rem;
-  height: 3rem;
+  width: 1.875rem;
+  height: 1.875rem;
   place-items: center;
   overflow: hidden;
-  border: 1px solid color-mix(
-    in srgb,
-    var(--subscription-brand-color) 54%,
-    var(--border-subtle)
-  );
+  border: 0;
   border-radius: var(--radius-lg);
   color: var(--text-primary);
+  background: transparent;
+}
+
+.subscription-card :deep(.status-badge) {
+  min-height: 1.375rem;
+  padding: 0 var(--space-2);
+  border-color: color-mix(
+    in srgb,
+    var(--subscription-brand-color) 58%,
+    var(--border-subtle)
+  );
   background: color-mix(
     in srgb,
-    var(--subscription-brand-color) 20%,
-    var(--surface-elevated)
+    var(--subscription-brand-color) 13%,
+    transparent
   );
+  font-size: var(--font-size-xs);
 }
 
 .subscription-card__logo {
-  width: 1.8rem;
-  height: 1.8rem;
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
   object-fit: contain;
 }
 
 .subscription-card__brand-fallback {
-  font-size: var(--font-size-lg);
-  font-weight: 900;
+  display: grid;
+  width: 1.875rem;
+  height: 1.875rem;
+  place-items: center;
+  border: 1px solid color-mix(
+    in srgb,
+    var(--subscription-brand-color) 70%,
+    var(--border-subtle)
+  );
+  background: color-mix(
+    in srgb,
+    var(--subscription-brand-color) 12%,
+    transparent
+  );
+  font-size: var(--font-size-md);
+  font-weight: 800;
 }
 
 .subscription-card__body {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-1);
   align-content: start;
 }
 
 .subscription-card__title-group {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .subscription-card__warning {
   width: fit-content;
-  margin: 0;
+  margin: var(--space-2) 0 0;
   padding: var(--space-1) var(--space-2);
   border: 1px solid var(--status-trial-border);
   border-radius: var(--radius-pill);
@@ -537,9 +571,9 @@ function createSafeId(value) {
 }
 
 .subscription-card__title {
-  margin: 0;
+  margin: 0.4375rem 0 0;
   color: var(--text-primary);
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
   line-height: var(--line-tight);
   letter-spacing: 0;
   overflow-wrap: anywhere;
@@ -548,85 +582,85 @@ function createSafeId(value) {
 .subscription-card__price {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-1);
   align-items: baseline;
+  margin-top: var(--space-1);
 }
 
 .subscription-card__price-value {
   color: var(--text-primary);
   font-size: var(--font-size-lg);
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .subscription-card__price-cycle {
   color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  font-weight: 800;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
 }
 
 .subscription-card__footer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-2) var(--space-3);
-  align-self: end;
-  padding-top: var(--space-4);
-  margin: 0;
+  grid-template-areas:
+    "label value"
+    "detail value";
+  gap: var(--space-2);
+  align-items: end;
+  padding-top: var(--space-2);
+  margin: auto 0 0;
   border-top: 1px solid var(--border-subtle);
 }
 
 .subscription-card__date-label,
 .subscription-card__date-detail {
   color: var(--text-muted);
-  font-size: var(--font-size-xs);
+  font-size: 0.5rem;
   font-weight: 800;
   letter-spacing: 0;
   text-transform: uppercase;
 }
 
+.subscription-card__date-label {
+  grid-area: label;
+  margin-bottom: var(--space-1);
+}
+
 .subscription-card__date-value {
+  grid-area: value;
   margin: 0;
   color: var(--text-primary);
-  font-size: var(--font-size-sm);
-  font-weight: 900;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
   text-align: right;
 }
 
 .subscription-card__date-detail {
-  grid-column: 1 / -1;
-  margin: 0;
+  grid-area: detail;
+  margin: var(--space-1) 0 0;
   color: var(--text-secondary);
   text-transform: none;
   overflow-wrap: anywhere;
 }
 
 .subscription-card__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  align-self: end;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.3125rem;
+  margin-top: 0.4375rem;
 }
 
 .subscription-card__action {
-  flex: 1 1 5.75rem;
+  width: 100%;
+  min-height: 1.625rem;
+  padding: 0 var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
 }
 
 @media (max-width: 520px) {
   .subscription-card {
-    min-height: 12.5rem;
-    padding: var(--space-4);
-  }
-
-  .subscription-card__footer {
-    grid-template-columns: 1fr;
-  }
-
-  .subscription-card__date-value {
-    text-align: left;
-  }
-
-  .subscription-card__actions,
-  .subscription-card__action {
-    width: 100%;
+    min-height: 10.75rem;
   }
 }
 </style>

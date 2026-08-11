@@ -38,7 +38,9 @@ describe('App', () => {
     expect(wrapper.get('#summary-title').text()).toBe('Ciclo atual');
     expect(wrapper.get('#subscriptions-title').text()).toBe('Lista local');
     expect(wrapper.get('button[type="button"]').text()).toBe('Nova assinatura');
-    expect(wrapper.get('[role="status"]').text()).toContain('Servico');
+    expect(wrapper.get('[role="status"]').text()).toContain(
+      'Carregando assinaturas locais',
+    );
     expect(wrapper.get('[role="status"]').attributes('aria-label')).toBe(
       'Carregando assinaturas locais',
     );
@@ -195,7 +197,51 @@ describe('App', () => {
     expect(wrapper.find('.subscription-card').exists()).toBe(true);
   });
 
-  it('opens and cancels the inline new subscription form', async () => {
+  it('opens and cancels the new subscription form in an accessible modal', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const wrapper = mountApp(
+      createStore({
+        isEmpty: true,
+        isLoaded: true,
+        status: storeStatus.EMPTY,
+      }),
+      { attachTo: host },
+    );
+
+    expect(wrapper.find('#new-subscription-form').exists()).toBe(false);
+
+    const openButton = wrapper.get('[data-test="open-subscription-form"]');
+
+    openButton.element.focus();
+    await openButton.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('#new-subscription-title').text()).toBe(
+      'Nova assinatura',
+    );
+    expect(wrapper.find('#new-subscription-form').exists()).toBe(true);
+    expect(wrapper.get('[role="dialog"]').attributes()).toEqual(
+      expect.objectContaining({
+        'aria-labelledby': 'new-subscription-title',
+        'aria-modal': 'true',
+      }),
+    );
+    expect(document.activeElement).toBe(
+      wrapper.get('[data-test="service-name"]').element,
+    );
+
+    await wrapper.get('[data-test="cancel-subscription-form"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('#new-subscription-form').exists()).toBe(false);
+    expect(document.activeElement).toBe(openButton.element);
+
+    wrapper.unmount();
+    host.remove();
+  });
+
+  it('closes the subscription modal by close button, escape and backdrop', async () => {
     const wrapper = mountApp(
       createStore({
         isEmpty: true,
@@ -203,19 +249,35 @@ describe('App', () => {
         status: storeStatus.EMPTY,
       }),
     );
+    const openButton = wrapper.get('[data-test="open-subscription-form"]');
 
-    expect(wrapper.find('#new-subscription-form').exists()).toBe(false);
+    await openButton.trigger('click');
+    await flushPromises();
+    await wrapper
+      .get('[data-test="close-subscription-form-dialog"]')
+      .trigger('click');
+    await flushPromises();
 
-    await wrapper.get('[data-test="open-subscription-form"]').trigger('click');
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
 
-    expect(wrapper.get('#new-subscription-title').text()).toBe(
-      'Nova assinatura',
+    await openButton.trigger('click');
+    await flushPromises();
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        bubbles: true,
+        key: 'Escape',
+      }),
     );
-    expect(wrapper.find('#new-subscription-form').exists()).toBe(true);
+    await flushPromises();
 
-    await wrapper.get('[data-test="cancel-subscription-form"]').trigger('click');
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
 
-    expect(wrapper.find('#new-subscription-form').exists()).toBe(false);
+    await openButton.trigger('click');
+    await flushPromises();
+    await wrapper.get('[data-test="subscription-form-backdrop"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
   });
 
   it('creates a paid subscription through the store and refreshes the loaded view', async () => {
@@ -580,10 +642,10 @@ describe('App', () => {
   });
 });
 
-function mountApp(store) {
+function mountApp(store, options = {}) {
   useSubscriptionsStoreMock.mockReturnValue(store);
 
-  return mount(App);
+  return mount(App, options);
 }
 
 function createStore(overrides = {}) {
