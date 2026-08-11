@@ -7,7 +7,7 @@ import {
 } from '../../domain/subscriptions/index.js';
 import SubscriptionCard from './SubscriptionCard.vue';
 
-const referenceDate = new Date('2026-08-03T00:00:00.000Z');
+const referenceDate = '2026-08-03';
 
 describe('SubscriptionCard', () => {
   it('renders status, value, cycle, renewal date and brand logo', () => {

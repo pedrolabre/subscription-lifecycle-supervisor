@@ -38,6 +38,25 @@ describe('date helpers', () => {
     expect(calculateDaysRemaining('2026-08-09', today)).toBe(8);
   });
 
+  it('uses local Date components instead of UTC conversion for late-night references', () => {
+    const originalTimezone = process.env.TZ;
+
+    process.env.TZ = 'America/Sao_Paulo';
+
+    try {
+      const lateNightReference = new Date(2026, 7, 1, 23, 30);
+
+      expect(lateNightReference.toISOString().slice(0, 10)).toBe('2026-08-02');
+      expect(calculateDaysRemaining('2026-08-01', lateNightReference)).toBe(0);
+    } finally {
+      if (originalTimezone === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = originalTimezone;
+      }
+    }
+  });
+
   it('returns null when either date is invalid', () => {
     expect(calculateDaysRemaining('2026-02-30', '2026-08-01')).toBeNull();
     expect(calculateDaysRemaining('2026-08-01', 'not-a-date')).toBeNull();

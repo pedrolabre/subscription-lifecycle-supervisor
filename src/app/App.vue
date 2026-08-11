@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import {
   SUBSCRIPTIONS_STORE_STATUS,
   useSubscriptionsStore,
@@ -22,8 +22,12 @@ const isSubmittingSubscription = ref(false);
 const isRunningLifecycleAction = ref(false);
 const subscriptionFormError = ref(null);
 const subscriptionActionError = ref(null);
+const currentDate = ref(new Date());
+let currentDateTimer = null;
 
 const listColumns = ['Servico', 'Valor', 'Data'];
+
+syncCurrentDate();
 
 const storeStatusLabels = {
   [SUBSCRIPTIONS_STORE_STATUS.IDLE]: 'Preparando leitura local',
@@ -190,10 +194,31 @@ const areCardActionsDisabled = computed(
 );
 
 onMounted(() => {
+  updateCurrentDate();
+  currentDateTimer = setInterval(updateCurrentDate, 60 * 1000);
+  currentDateTimer?.unref?.();
+
   if (!subscriptionsStore.isLoaded && !subscriptionsStore.isLoading) {
     loadSubscriptions();
   }
 });
+
+onUnmounted(() => {
+  if (currentDateTimer !== null) {
+    clearInterval(currentDateTimer);
+  }
+});
+
+function updateCurrentDate() {
+  currentDate.value = new Date();
+  syncCurrentDate();
+}
+
+function syncCurrentDate() {
+  if (typeof subscriptionsStore.setReferenceDate === 'function') {
+    subscriptionsStore.setReferenceDate(currentDate.value);
+  }
+}
 
 function loadSubscriptions() {
   return subscriptionsStore.load().catch(() => undefined);
@@ -568,6 +593,7 @@ function createLocalMutationError(message) {
                 v-for="(subscription, index) in subscriptionCards"
                 :key="getSubscriptionKey(subscription, index)"
                 :actions-disabled="areCardActionsDisabled"
+                :reference-date="currentDate"
                 :subscription="subscription"
                 @archive="archiveSubscription"
                 @edit="openEditSubscriptionForm"
