@@ -12,7 +12,16 @@ test('renders the empty local dashboard without backend data', async ({ page }) 
   await expect(page.getByRole('heading', { name: 'Lista local' })).toBeVisible();
   await expect(page.getByText('Nenhuma assinatura salva')).toBeVisible();
   await expect(page.getByText('Custo normalizado')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Nova assinatura' })).toBeEnabled();
+
+  const openFormButton = page.getByRole('button', { name: 'Nova assinatura' });
+
+  await expect(openFormButton).toBeEnabled();
+  await openFormButton.click();
+  await expect(page.getByRole('dialog', { name: 'Nova assinatura' })).toBeVisible();
+  await expect(page.locator('[data-test="service-name"]')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Nova assinatura' })).toBeHidden();
+  await expect(openFormButton).toBeFocused();
 });
 
 test('covers paid subscription, trial alert, edit, archive and reload persistence', async ({

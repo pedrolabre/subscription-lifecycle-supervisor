@@ -12,7 +12,10 @@ import {
   SummaryMetric,
 } from '../shared/components/index.js';
 import { SubscriptionCard } from '../features/subscription-card/index.js';
-import { NewSubscriptionForm } from '../features/subscription-form/index.js';
+import {
+  NewSubscriptionForm,
+  SubscriptionFormDialog,
+} from '../features/subscription-form/index.js';
 
 const productName = 'Subscription Lifecycle Supervisor';
 const subscriptionsStore = useSubscriptionsStore();
@@ -24,8 +27,6 @@ const subscriptionFormError = ref(null);
 const subscriptionActionError = ref(null);
 const currentDate = ref(new Date());
 let currentDateTimer = null;
-
-const listColumns = ['Servico', 'Valor', 'Data'];
 
 syncCurrentDate();
 
@@ -171,6 +172,14 @@ const subscriptionsListLabel = computed(() => {
 
 const subscriptionFormMode = computed(() =>
   editingSubscription.value ? 'edit' : 'create',
+);
+
+const subscriptionDialogEyebrow = computed(() =>
+  editingSubscription.value ? 'Edicao local' : 'Cadastro local',
+);
+
+const subscriptionDialogTitle = computed(() =>
+  editingSubscription.value ? 'Editar assinatura' : 'Nova assinatura',
 );
 
 const subscriptionFormKey = computed(
@@ -437,7 +446,8 @@ function createLocalMutationError(message) {
           data-test="open-subscription-form"
           type="button"
           variant="primary"
-          aria-controls="new-subscription-form"
+          aria-controls="subscription-form-dialog"
+          aria-haspopup="dialog"
           :aria-expanded="isSubscriptionFormOpen"
           :disabled="isLoadingState || isSubmittingSubscription"
           @click="openSubscriptionForm"
@@ -451,140 +461,122 @@ function createLocalMutationError(message) {
       class="app-main"
       aria-label="Painel de assinaturas"
     >
-      <section
-        class="app-summary-region"
-        aria-labelledby="summary-title"
-      >
-        <div class="section-heading">
-          <p class="section-label">
-            Resumo
-          </p>
-          <h2 id="summary-title">
-            Ciclo atual
-          </h2>
-        </div>
-
-        <dl class="summary-grid">
-          <SummaryMetric
-            v-for="item in summaryMetrics"
-            :key="item.label"
-            :detail="item.detail"
-            :label="item.label"
-            :value="item.value"
-          />
-        </dl>
-
-        <div
-          v-if="hasTrialAlerts"
-          class="trial-summary-alert"
-          role="status"
-          aria-live="polite"
+      <div class="dashboard-grid">
+        <section
+          class="app-summary-region"
+          aria-labelledby="summary-title"
         >
-          <StatusBadge tone="trial">
-            Trial
-          </StatusBadge>
-          <div class="trial-summary-alert__copy">
-            <p class="trial-summary-alert__title">
-              {{ trialAlertSummary }}
+          <div class="section-heading">
+            <p class="section-label">
+              Resumo
             </p>
-            <p class="trial-summary-alert__detail">
-              {{ trialAlertDetail }}
-            </p>
+            <h2 id="summary-title">
+              Ciclo atual
+            </h2>
           </div>
-        </div>
-      </section>
 
-      <NewSubscriptionForm
-        v-if="isSubscriptionFormOpen"
-        :key="subscriptionFormKey"
-        :is-submitting="isSubmittingSubscription"
-        :mode="subscriptionFormMode"
-        :submission-error="subscriptionFormError"
-        :subscription="editingSubscription"
-        @cancel="closeSubscriptionForm"
-        @change="clearSubscriptionFormError"
-        @submit="submitSubscription"
-      />
+          <dl class="summary-grid">
+            <SummaryMetric
+              v-for="item in summaryMetrics"
+              :key="item.label"
+              :detail="item.detail"
+              :label="item.label"
+              :value="item.value"
+            />
+          </dl>
 
-      <section
-        class="app-list-region"
-        aria-labelledby="subscriptions-title"
-      >
-        <div class="section-heading">
-          <p class="section-label">
-            Assinaturas
-          </p>
-          <h2 id="subscriptions-title">
-            Lista local
-          </h2>
-        </div>
-
-        <p
-          v-if="subscriptionActionError"
-          class="subscription-action-error"
-          role="alert"
-        >
-          {{ subscriptionActionErrorMessage }}
-        </p>
-
-        <div
-          class="subscriptions-list-shell"
-          :aria-busy="isLoadingState"
-          aria-label="Area da lista de assinaturas"
-          aria-live="polite"
-        >
           <div
-            v-if="isLoadingState"
-            class="loading-state"
+            v-if="hasTrialAlerts"
+            class="trial-summary-alert"
             role="status"
-            aria-label="Carregando assinaturas locais"
+            aria-live="polite"
           >
-            <div class="list-columns">
-              <span
-                v-for="column in listColumns"
-                :key="column"
-              >
-                {{ column }}
-              </span>
-            </div>
-
-            <div
-              v-for="rowIndex in 3"
-              :key="rowIndex"
-              class="list-row-slot is-loading"
-            >
-              <span />
-              <span />
-              <span />
+            <StatusBadge tone="trial">
+              Trial
+            </StatusBadge>
+            <div class="trial-summary-alert__copy">
+              <p class="trial-summary-alert__title">
+                {{ trialAlertSummary }}
+              </p>
+              <p class="trial-summary-alert__detail">
+                {{ trialAlertDetail }}
+              </p>
             </div>
           </div>
+        </section>
 
-          <StatePanel
-            v-else-if="isErrorState"
-            :action-label="
-              subscriptionsStore.canRetry ? 'Tentar novamente' : ''
-            "
-            :description="errorMessage"
-            eyebrow="Leitura local"
+        <section
+          class="app-list-region"
+          aria-labelledby="subscriptions-title"
+        >
+          <div class="section-heading">
+            <p class="section-label">
+              Assinaturas
+            </p>
+            <h2 id="subscriptions-title">
+              Lista local
+            </h2>
+          </div>
+
+          <p
+            v-if="subscriptionActionError"
+            class="subscription-action-error"
             role="alert"
-            title="Nao foi possivel carregar as assinaturas"
-            tone="error"
-            @action="retrySubscriptionsLoad"
-          />
-
-          <StatePanel
-            v-else-if="isEmptyState"
-            description="Sua lista local ainda nao tem assinaturas. Os dados aparecerao aqui depois do primeiro cadastro."
-            eyebrow="Lista local"
-            title="Nenhuma assinatura salva"
-            tone="empty"
-          />
+          >
+            {{ subscriptionActionErrorMessage }}
+          </p>
 
           <div
-            v-else-if="isLoadedState"
-            class="loaded-state"
+            class="subscriptions-list-shell"
+            :aria-busy="isLoadingState"
+            aria-label="Area da lista de assinaturas"
+            aria-live="polite"
           >
             <div
+              v-if="isLoadingState"
+              class="loading-state subscription-card-grid"
+              role="status"
+              aria-label="Carregando assinaturas locais"
+            >
+              <span class="sr-only">
+                Carregando assinaturas locais
+              </span>
+              <article
+                v-for="cardIndex in 4"
+                :key="cardIndex"
+                class="subscription-card-skeleton"
+                aria-hidden="true"
+              >
+                <span />
+                <span />
+                <span />
+                <span />
+              </article>
+            </div>
+
+            <StatePanel
+              v-else-if="isErrorState"
+              :action-label="
+                subscriptionsStore.canRetry ? 'Tentar novamente' : ''
+              "
+              :description="errorMessage"
+              eyebrow="Leitura local"
+              role="alert"
+              title="Nao foi possivel carregar as assinaturas"
+              tone="error"
+              @action="retrySubscriptionsLoad"
+            />
+
+            <StatePanel
+              v-else-if="isEmptyState"
+              description="Sua lista local ainda nao tem assinaturas. Os dados aparecerao aqui depois do primeiro cadastro."
+              eyebrow="Lista local"
+              title="Nenhuma assinatura salva"
+              tone="empty"
+            />
+
+            <div
+              v-else-if="isLoadedState"
               class="subscription-card-grid"
               role="list"
               :aria-label="subscriptionsListLabel"
@@ -600,17 +592,40 @@ function createLocalMutationError(message) {
                 @end="endSubscription"
               />
             </div>
-          </div>
 
-          <StatePanel
-            v-else
-            description="Sua lista local ainda nao tem assinaturas. Os dados aparecerao aqui depois do primeiro cadastro."
-            eyebrow="Lista local"
-            title="Nenhuma assinatura salva"
-            tone="empty"
-          />
-        </div>
-      </section>
+            <StatePanel
+              v-else
+              description="Sua lista local ainda nao tem assinaturas. Os dados aparecerao aqui depois do primeiro cadastro."
+              eyebrow="Lista local"
+              title="Nenhuma assinatura salva"
+              tone="empty"
+            />
+          </div>
+        </section>
+      </div>
+
+      <SubscriptionFormDialog
+        :eyebrow="subscriptionDialogEyebrow"
+        :open="isSubscriptionFormOpen"
+        title-id="new-subscription-title"
+        :title="subscriptionDialogTitle"
+        @close="closeSubscriptionForm"
+      >
+        <NewSubscriptionForm
+          v-if="isSubscriptionFormOpen"
+          :key="subscriptionFormKey"
+          embedded
+          :is-submitting="isSubmittingSubscription"
+          :mode="subscriptionFormMode"
+          :show-header="false"
+          :submission-error="subscriptionFormError"
+          :subscription="editingSubscription"
+          title-id="new-subscription-title"
+          @cancel="closeSubscriptionForm"
+          @change="clearSubscriptionFormError"
+          @submit="submitSubscription"
+        />
+      </SubscriptionFormDialog>
     </main>
   </div>
 </template>
@@ -618,24 +633,19 @@ function createLocalMutationError(message) {
 <style scoped>
 .app-shell {
   display: grid;
+  width: min(calc(100% - 20px), var(--content-width));
   min-height: 100vh;
   grid-template-rows: auto 1fr;
-  gap: var(--space-5);
-}
-
-.app-header,
-.app-main {
-  width: min(100% - var(--space-6), 1120px);
   margin: 0 auto;
+  padding-bottom: 0.875rem;
 }
 
 .app-header {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
+  min-height: 4.25rem;
+  gap: 0.875rem;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-5) 0 var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -657,7 +667,6 @@ function createLocalMutationError(message) {
 
 .app-header-actions {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
   justify-content: flex-end;
@@ -684,14 +693,24 @@ h1 {
 .app-main {
   display: grid;
   align-content: start;
-  gap: var(--space-7);
-  padding: var(--space-2) 0 var(--space-8);
+  gap: var(--space-5);
+  min-width: 0;
+  padding-top: 1.25rem;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 0.875rem;
+  align-items: start;
+  min-width: 0;
 }
 
 .app-summary-region,
 .app-list-region {
   display: grid;
-  gap: var(--space-4);
+  min-width: 0;
+  gap: var(--space-3);
 }
 
 .section-heading {
@@ -709,8 +728,8 @@ h2 {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
-  gap: var(--space-3);
+  grid-template-columns: 1fr;
+  gap: 0.4375rem;
   margin: 0;
 }
 
@@ -718,7 +737,7 @@ h2 {
   display: flex;
   gap: var(--space-3);
   align-items: center;
-  padding: var(--space-4);
+  padding: var(--space-3);
   border: 1px solid var(--status-trial-border);
   border-radius: var(--radius-lg);
   background: var(--status-trial-surface);
@@ -737,7 +756,7 @@ h2 {
 
 .trial-summary-alert__title {
   color: var(--text-primary);
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .trial-summary-alert__detail {
@@ -757,95 +776,111 @@ h2 {
   font-weight: 700;
 }
 
-.list-columns {
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.list-columns {
-  font-weight: 700;
-}
-
 .subscriptions-list-shell {
   min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--surface-base);
-}
-
-.list-columns,
-.list-row-slot {
-  display: grid;
-  grid-template-columns:
-    minmax(9rem, 1.4fr) minmax(7rem, 0.85fr) minmax(6rem, 0.6fr);
-  gap: var(--space-3);
-  align-items: center;
-}
-
-.list-columns {
-  min-height: 3rem;
-  padding: 0 var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.list-columns span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.list-row-slot {
-  min-height: 4.75rem;
-  padding: 0 var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.list-row-slot:last-child {
-  border-bottom: 0;
-}
-
-.list-row-slot span {
-  display: block;
-  height: 0.75rem;
-  border-radius: var(--radius-pill);
-  background:
-    linear-gradient(
-      90deg,
-      rgb(245 242 232 / 8%),
-      rgb(245 242 232 / 16%),
-      rgb(245 242 232 / 8%)
-    );
-}
-
-.list-row-slot span:nth-child(1) {
-  width: min(100%, 13rem);
-}
-
-.list-row-slot span:nth-child(2) {
-  width: min(100%, 9rem);
-}
-
-.list-row-slot span:nth-child(3) {
-  width: min(100%, 6rem);
+  overflow: visible;
 }
 
 .subscription-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16.5rem), 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
   min-width: 0;
-  padding: var(--space-4);
+}
+
+.subscription-card-skeleton {
+  display: grid;
+  min-height: 11.125rem;
+  gap: var(--space-3);
+  align-content: start;
+  padding: 0.625rem 0.75rem 0.5625rem 0.875rem;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(
+      135deg,
+      rgb(117 242 218 / 12%),
+      var(--surface-base) 45%,
+      var(--surface-base) 100%
+    );
+}
+
+.subscription-card-skeleton span {
+  display: block;
+  height: 0.625rem;
+  background:
+    linear-gradient(
+      90deg,
+      rgb(245 242 230 / 8%),
+      rgb(245 242 230 / 16%),
+      rgb(245 242 230 / 8%)
+    );
+}
+
+.subscription-card-skeleton span:first-child {
+  width: 1.875rem;
+  height: 1.875rem;
+}
+
+.subscription-card-skeleton span:nth-child(2) {
+  width: min(100%, 9rem);
+  height: 0.875rem;
+  margin-top: var(--space-2);
+}
+
+.subscription-card-skeleton span:nth-child(3) {
+  width: min(100%, 6rem);
+}
+
+.subscription-card-skeleton span:nth-child(4) {
+  align-self: end;
+  width: 100%;
+  margin-top: auto;
+}
+
+.subscriptions-list-shell :deep(.state-panel) {
+  min-height: 17.1875rem;
+  border: 1px solid var(--border-subtle);
+}
+
+@media (max-width: 1150px) {
+  .subscription-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 850px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary-grid :deep(.summary-metric:last-child) {
+    grid-column: 1 / -1;
+  }
+
+  .subscription-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .subscriptions-list-shell :deep(.state-panel) {
+    min-height: 11.25rem;
+  }
 }
 
 @media (max-width: 700px) {
-  .app-header,
-  .app-main {
-    width: min(100% - var(--space-4), 960px);
+  .app-shell {
+    width: min(calc(100% - 24px), var(--content-width));
   }
 
-  .app-header,
-  .app-header-actions {
+  .app-header {
+    flex-wrap: wrap;
     align-items: stretch;
+    padding: 1.125rem 0;
   }
 
   .app-header-actions,
@@ -856,18 +891,21 @@ h2 {
   .app-primary-action {
     justify-content: center;
   }
+}
 
-  .list-columns {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
-  }
-
-  .list-columns span:nth-child(2) {
-    display: none;
-  }
-
-  .list-row-slot {
+@media (max-width: 640px) {
+  .summary-grid {
     grid-template-columns: 1fr;
-    align-content: center;
+  }
+
+  .summary-grid :deep(.summary-metric:last-child) {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 540px) {
+  .subscription-card-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

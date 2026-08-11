@@ -70,6 +70,10 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  embedded: {
+    type: Boolean,
+    default: false,
+  },
   mode: {
     type: String,
     default: 'create',
@@ -86,6 +90,14 @@ const props = defineProps({
   subscription: {
     type: Object,
     default: null,
+  },
+  showHeader: {
+    type: Boolean,
+    default: true,
+  },
+  titleId: {
+    type: String,
+    default: 'new-subscription-title',
   },
 });
 
@@ -524,21 +536,25 @@ function isRecord(value) {
   <section
     id="new-subscription-form"
     class="subscription-form-panel"
-    aria-labelledby="new-subscription-title"
+    :class="{ 'subscription-form-panel--embedded': embedded }"
+    :aria-labelledby="titleId"
   >
     <form
       class="subscription-form"
       novalidate
-      aria-labelledby="new-subscription-title"
+      :aria-labelledby="titleId"
       :aria-busy="isSubmitting"
       :aria-describedby="formDescribedBy"
       @submit.prevent="submitForm"
     >
-      <div class="subscription-form__header">
+      <div
+        v-if="showHeader"
+        class="subscription-form__header"
+      >
         <p class="subscription-form__eyebrow">
           {{ formEyebrow }}
         </p>
-        <h2 id="new-subscription-title">
+        <h2 :id="titleId">
           {{ formTitle }}
         </h2>
       </div>
@@ -591,6 +607,7 @@ function isRecord(value) {
             data-test="service-name"
             type="text"
             autocomplete="off"
+            data-dialog-autofocus
             :maxlength="SUBSCRIPTION_FIELD_LIMITS.serviceNameMaxLength"
             :aria-invalid="Boolean(fieldErrors.serviceName)"
             :aria-describedby="
@@ -605,42 +622,6 @@ function isRecord(value) {
           >
             {{ fieldErrors.serviceName }}
           </span>
-
-          <div class="subscription-form__catalog-row">
-            <label class="subscription-form__catalog-select">
-              <span>Catalogo</span>
-              <select
-                id="subscription-service-catalog"
-                data-test="service-catalog-select"
-                :value="selectedServiceId"
-                @change="selectCatalogServiceId($event.target.value)"
-              >
-                <option value="">
-                  Nome livre
-                </option>
-                <option
-                  v-for="service in serviceCatalog"
-                  :key="service.id"
-                  :value="service.id"
-                >
-                  {{ service.name }}
-                </option>
-              </select>
-            </label>
-
-            <BaseButton
-              v-if="hasSelectedCatalogService"
-              class="subscription-form__catalog-clear"
-              data-test="clear-service-selection"
-              type="button"
-              variant="secondary"
-              :aria-label="`Limpar selecao de ${selectedCatalogService.name}`"
-              :disabled="isSubmitting"
-              @click="clearCatalogSelection"
-            >
-              Limpar
-            </BaseButton>
-          </div>
 
           <ul
             v-if="serviceSearchResults.length"
@@ -675,7 +656,45 @@ function isRecord(value) {
           </ul>
         </div>
 
-        <label class="subscription-form__field">
+        <div class="subscription-form__field subscription-form__field--catalog">
+          <label for="subscription-service-catalog">
+            Catalogo
+          </label>
+          <div class="subscription-form__catalog-controls">
+            <select
+              id="subscription-service-catalog"
+              data-test="service-catalog-select"
+              :value="selectedServiceId"
+              @change="selectCatalogServiceId($event.target.value)"
+            >
+              <option value="">
+                Nome livre
+              </option>
+              <option
+                v-for="service in serviceCatalog"
+                :key="service.id"
+                :value="service.id"
+              >
+                {{ service.name }}
+              </option>
+            </select>
+
+            <BaseButton
+              v-if="hasSelectedCatalogService"
+              class="subscription-form__catalog-clear"
+              data-test="clear-service-selection"
+              type="button"
+              variant="secondary"
+              :aria-label="`Limpar selecao de ${selectedCatalogService.name}`"
+              :disabled="isSubmitting"
+              @click="clearCatalogSelection"
+            >
+              Limpar
+            </BaseButton>
+          </div>
+        </div>
+
+        <label class="subscription-form__field subscription-form__field--start">
           <span>Inicio</span>
           <input
             ref="startDateInput"
@@ -698,7 +717,7 @@ function isRecord(value) {
 
         <label
           v-if="isPaidAccess"
-          class="subscription-form__field"
+          class="subscription-form__field subscription-form__field--value"
         >
           <span>Valor</span>
           <input
@@ -723,7 +742,7 @@ function isRecord(value) {
 
         <label
           v-if="isPaidAccess"
-          class="subscription-form__field"
+          class="subscription-form__field subscription-form__field--cycle"
         >
           <span>Ciclo</span>
           <select
@@ -754,7 +773,7 @@ function isRecord(value) {
 
         <label
           v-if="requiresRenewalDate"
-          class="subscription-form__field"
+          class="subscription-form__field subscription-form__field--renewal"
         >
           <span>Renovacao</span>
           <input
@@ -778,7 +797,7 @@ function isRecord(value) {
 
         <label
           v-if="isTrialAccess"
-          class="subscription-form__field"
+          class="subscription-form__field subscription-form__field--trial-end"
         >
           <span>Fim do trial</span>
           <input
@@ -832,10 +851,20 @@ function isRecord(value) {
   background: var(--surface-base);
 }
 
+.subscription-form-panel--embedded {
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+
 .subscription-form {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-4);
   padding: var(--space-5);
+}
+
+.subscription-form-panel--embedded .subscription-form {
+  padding: 0;
 }
 
 .subscription-form__header {
@@ -846,7 +875,6 @@ function isRecord(value) {
 .subscription-form__eyebrow,
 .subscription-form__group legend,
 .subscription-form__field > label:first-child,
-.subscription-form__catalog-select > span:first-child,
 .subscription-form__field > span:first-child {
   color: var(--text-accent);
   font-size: var(--font-size-xs);
@@ -892,7 +920,7 @@ function isRecord(value) {
 .subscription-form__kind-options {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-2);
+  gap: 0.375rem;
 }
 
 .subscription-form__kind-option {
@@ -945,8 +973,8 @@ function isRecord(value) {
 
 .subscription-form__grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.625rem 0.75rem;
 }
 
 .subscription-form__field {
@@ -955,8 +983,17 @@ function isRecord(value) {
   gap: var(--space-2);
 }
 
-.subscription-form__field--service {
-  grid-column: 1 / -1;
+.subscription-form__field--service,
+.subscription-form__field--catalog {
+  grid-column: span 6;
+}
+
+.subscription-form__field--start,
+.subscription-form__field--value,
+.subscription-form__field--cycle,
+.subscription-form__field--renewal,
+.subscription-form__field--trial-end {
+  grid-column: span 3;
 }
 
 .subscription-form__field input[aria-invalid="true"],
@@ -964,21 +1001,15 @@ function isRecord(value) {
   border-color: var(--border-danger);
 }
 
-.subscription-form__catalog-row {
+.subscription-form__catalog-controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  align-items: end;
-}
-
-.subscription-form__catalog-select {
-  display: grid;
-  min-width: 0;
   gap: var(--space-2);
 }
 
 .subscription-form__catalog-clear {
   min-height: var(--control-height-md);
+  padding: 0 var(--space-3);
 }
 
 .subscription-form__catalog-suggestions {
@@ -1005,7 +1036,7 @@ function isRecord(value) {
   align-items: center;
   gap: var(--space-2);
   padding: 0 var(--space-3);
-  border-color: var(--status-info-border);
+  border: 1px solid var(--status-info-border);
   border-radius: var(--radius-pill);
   color: var(--text-secondary);
   background: var(--status-info-surface);
@@ -1043,21 +1074,56 @@ function isRecord(value) {
   flex-wrap: wrap;
   gap: var(--space-3);
   justify-content: flex-end;
+  margin-top: var(--space-1);
 }
 
-@media (max-width: 700px) {
+@media (max-width: 700px) and (min-width: 641px) {
+  .subscription-form__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .subscription-form__field--service,
+  .subscription-form__field--catalog {
+    grid-column: span 2;
+  }
+
+  .subscription-form__field--start,
+  .subscription-form__field--value,
+  .subscription-form__field--cycle,
+  .subscription-form__field--renewal,
+  .subscription-form__field--trial-end {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 640px) {
   .subscription-form {
     padding: var(--space-4);
   }
 
-  .subscription-form__kind-options,
+  .subscription-form-panel--embedded .subscription-form {
+    padding: 0;
+  }
+
   .subscription-form__grid,
-  .subscription-form__catalog-row {
+  .subscription-form__catalog-controls {
     grid-template-columns: 1fr;
   }
 
-  .subscription-form__actions,
-  .subscription-form__actions .base-button,
+  .subscription-form__kind-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .subscription-form__field--service,
+  .subscription-form__field--catalog,
+  .subscription-form__field--start,
+  .subscription-form__field--value,
+  .subscription-form__field--cycle,
+  .subscription-form__field--renewal,
+  .subscription-form__field--trial-end {
+    grid-column: auto;
+  }
+
   .subscription-form__catalog-clear {
     width: 100%;
   }
