@@ -1,4 +1,26 @@
-# Subscription Lifecycle Supervisor
+<div align="center">
+
+![Subscription Lifecycle Supervisor Banner](./public/assets/banner-animated.svg)
+
+</div>
+
+<div align="center">
+
+![Typing SVG](https://readme-typing-svg.demolab.com?font=Plus+Jakarta+Sans&weight=600&size=18&duration=3000&pause=1000&color=23dfa0&center=true&vCenter=true&width=750&lines=Controle+de+ciclos+de+cobran%C3%A7a+e+expira%C3%A7%C3%A3o;Painel+local-first+para+assinaturas+digitais;Persist%C3%AAncia+segura+via+IndexedDB;Funciona+offline+como+PWA)
+
+</div>
+
+<div align="center">
+
+[![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white)](#-tecnologias)
+[![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white)](#-tecnologias)
+[![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](#-tecnologias)
+[![Vitest](https://img.shields.io/badge/Vitest-Ready-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](#-tecnologias)
+[![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)](#-validacao)
+
+</div>
+
+---
 
 Subscription Lifecycle Supervisor e um painel local-first para acompanhar
 assinaturas digitais, planos gratuitos, beneficios educacionais e periodos de
@@ -9,9 +31,42 @@ sem exigir login, conexao bancaria, planilhas complexas ou sincronizacao em
 nuvem. A aplicacao roda no navegador, persiste os dados em IndexedDB e funciona
 como PWA depois de carregada/instalada.
 
+<div align="center">
+
+<table>
+  <tr>
+    <td align="center" valign="middle" width="80">
+      <img src="./public/assets/logos/logo.svg" alt="Subscription Lifecycle Supervisor Icon" width="60" height="60">
+    </td>
+    <td>
+      <strong>Subscription Lifecycle Supervisor</strong><br/>
+      <small>Painel local-first para acompanhar assinaturas, planos e períodos de teste.</small><br/>
+      <a href="https://subscription-lifecycle-supervisor.vercel.app/" target="_blank">
+        <img src="https://img.shields.io/badge/Deploy%20na%20Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Deploy na Vercel" height="20">
+      </a>
+    </td>
+  </tr>
+</table>
+
+</div>
+
 ---
 
-## O Problema
+## 📌 Índice Geral
+
+1. [🎯 O Problema](#-o-problema)
+2. [💡 A Solucao](#-a-solucao)
+3. [✨ Funcionalidades do MVP](#-funcionalidades-do-mvp)
+4. [🚧 Limites do MVP](#-limites-do-mvp)
+5. [⚡ Tecnologias](#-tecnologias)
+6. [🚀 Como Executar Localmente](#-como-executar-localmente)
+7. [📦 Entrega Estatica](#-entrega-estatica)
+8. [🧪 Validacao](#-validacao)
+9. [📁 Estrutura do Projeto](#-estrutura-do-projeto)
+
+---
+
+## 🎯 O Problema
 
 Assinaturas mensais, cobrancas anuais, licencas gratuitas que expiram e trials
 de poucos dias sao faceis de esquecer. O resultado costuma ser uma mistura de
@@ -22,7 +77,9 @@ Planilhas resolvem parte do problema, mas adicionam atrito. Aplicativos
 financeiros completos podem ser exagerados para quem so quer entender e
 acompanhar assinaturas.
 
-## A Solucao
+---
+
+## 💡 A Solucao
 
 O produto foi construido como uma aplicacao web simples, visual e local-first:
 
@@ -34,7 +91,9 @@ O produto foi construido como uma aplicacao web simples, visual e local-first:
 - **Foco no ciclo de vida:** o app prioriza renovacoes, trials perto do fim,
   assinaturas encerradas e itens arquivados.
 
-## Funcionalidades do MVP
+---
+
+## ✨ Funcionalidades do MVP
 
 - Dashboard com custo mensal normalizado e projecao anual.
 - Cadastro rapido de assinatura paga, gratuita, educacional ou trial.
@@ -48,14 +107,18 @@ O produto foi construido como uma aplicacao web simples, visual e local-first:
 - Testes automatizados unitarios/componentes e E2E dos fluxos principais.
 - CI de validacao para build, testes, lint e E2E em Chromium.
 
-## Limites do MVP
+---
+
+## 🚧 Limites do MVP
 
 O MVP nao inclui backend, login, conta remota, banco remoto, sincronizacao entre
 dispositivos, analytics, notificacoes push reais, importacao/exportacao ou
 chamadas externas de runtime. Os dados ficam no navegador do usuario; limpar os
 dados do site no navegador tambem remove os registros locais.
 
-## Tecnologias
+---
+
+## ⚡ Tecnologias
 
 - Vue 3 com Composition API.
 - Vite.
@@ -66,7 +129,9 @@ dados do site no navegador tambem remove os registros locais.
 - CSS modular com design tokens.
 - Vitest, Vue Test Utils e Playwright.
 
-## Como Executar Localmente
+---
+
+## 🚀 Como Executar Localmente
 
 Requisitos:
 
@@ -91,7 +156,9 @@ usado pelo Playwright:
 npx playwright install chromium
 ```
 
-## Entrega Estatica
+---
+
+## 📦 Entrega Estatica
 
 O build de producao e gerado em `dist/`:
 
@@ -103,7 +170,9 @@ O conteudo de `dist/` pode ser publicado em uma hospedagem estatica. O projeto
 nao possui deploy automatico configurado, nao exige secrets e nao depende de
 backend em runtime.
 
-## Validacao
+---
+
+## 🧪 Validacao
 
 Antes de entregar uma alteracao, rode:
 
@@ -118,7 +187,9 @@ A CI em GitHub Actions executa a mesma validacao principal em `push` e
 `pull_request` para `main`, incluindo instalacao do Chromium do Playwright no
 ambiente de CI.
 
-## Estrutura do Projeto
+---
+
+## 📁 Estrutura do Projeto
 
 Estrutura publica atual:
 
@@ -219,3 +290,5 @@ subscription-lifecycle-supervisor/
 Esta secao acompanha apenas a estrutura publica real do projeto e deve ser
 atualizada quando arquivos e diretorios publicos forem criados, removidos,
 movidos ou renomeados.
+
+---
