@@ -3,7 +3,7 @@ const APP_DESCRIPTION =
   'Painel local-first para acompanhar assinaturas, planos gratuitos e trials.';
 
 export const pwaIconPaths = {
-  svg: '/icons/app-icon.svg',
+  svg: '/assets/logos/logo.svg',
   icon192: '/icons/pwa-icon-192.png',
   icon512: '/icons/pwa-icon-512.png',
   maskable512: '/icons/pwa-maskable-512.png',

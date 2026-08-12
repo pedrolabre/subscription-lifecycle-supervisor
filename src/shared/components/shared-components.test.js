@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import AppLogo from './AppLogo.vue';
 import BaseButton from './BaseButton.vue';
 import ConfirmDialog from './ConfirmDialog.vue';
 import StatePanel from './StatePanel.vue';
@@ -120,5 +121,13 @@ describe('shared visual primitives', () => {
 
     await wrapper.get('[data-test="undo-toast-close"]').trigger('click');
     expect(wrapper.emitted('dismiss')).toHaveLength(1);
+  });
+
+  it('renders the AppLogo component with inline adaptive SVG elements', () => {
+    const wrapper = mount(AppLogo);
+
+    const svg = wrapper.find('svg');
+    expect(svg.exists()).toBe(true);
+    expect(svg.attributes('aria-label')).toBe('Subscription Lifecycle Supervisor Logo');
   });
 });
