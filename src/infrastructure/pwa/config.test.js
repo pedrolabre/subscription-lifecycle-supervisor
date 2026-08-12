@@ -51,7 +51,7 @@ describe('pwa configuration', () => {
         workbox: pwaWorkbox,
       }),
     );
-    expect(pwaPluginOptions.includeAssets).toEqual(['icons/app-icon.svg']);
+    expect(pwaPluginOptions.includeAssets).toEqual(['assets/logos/logo.svg']);
     expect(pwaWorkbox).toEqual(
       expect.objectContaining({
         cleanupOutdatedCaches: true,

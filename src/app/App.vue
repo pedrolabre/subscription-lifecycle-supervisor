@@ -7,6 +7,7 @@ import {
 import { SUBSCRIPTION_STATUS } from '../domain/subscriptions/index.js';
 import { formatCurrency } from '../core/money/index.js';
 import {
+  AppLogo,
   BaseButton,
   ConfirmDialog,
   LocaleToggle,
@@ -571,6 +572,7 @@ function createLocalMutationError(message) {
       aria-labelledby="app-title"
     >
       <div class="app-identity">
+        <AppLogo class="app-identity-logo" />
         <h1 id="app-title">
           {{ productName }}
         </h1>
@@ -819,9 +821,16 @@ function createLocalMutationError(message) {
 }
 
 .app-identity {
-  display: grid;
-  gap: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   min-width: min(100%, 22rem);
+}
+
+.app-identity-logo {
+  height: 3.5rem;
+  width: auto;
+  flex-shrink: 0;
 }
 
 .app-context,
