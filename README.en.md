@@ -1,3 +1,7 @@
+<div align="right">
+  <a href="./README.md">Português</a> &nbsp;•&nbsp; <b>English</b>
+</div>
+
 <div align="center">
 
 ![Subscription Lifecycle Supervisor Banner](./public/assets/banner-animated.en.svg)
@@ -12,19 +16,20 @@
 
 <div align="center">
 
-[![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white)](#-technologies)
-[![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white)](#-technologies)
-[![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](#-technologies)
-[![Vitest](https://img.shields.io/badge/Vitest-Ready-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](#-technologies)
-[![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)](#-validation)
+[![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white)](#technologies-used)
+[![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=white)](#technologies-used)
+[![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](#technologies-used)
+[![Vitest](https://img.shields.io/badge/Vitest-Ready-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](#tests-and-build)
+[![Playwright](https://img.shields.io/badge/Playwright-E2E-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)](#tests-and-build)
 
 </div>
 
 ---
 
-Subscription Lifecycle Supervisor is a local-first dashboard to track digital subscriptions, free plans, educational benefits, and trial periods.
-
-The goal of the project is to return control over billing and expiration cycles without requiring logins, bank connections, complex spreadsheets, or cloud synchronization. The application runs in the browser, persists data in IndexedDB, and works as a PWA once loaded/installed.
+**Subscription Lifecycle Supervisor** is a local-first SPA for tracking digital
+subscriptions, free plans, educational benefits, and trial periods. Everything
+runs in the browser: there is no backend, login, remote database, or mandatory
+cloud synchronization.
 
 <div align="center">
 
@@ -35,9 +40,9 @@ The goal of the project is to return control over billing and expiration cycles 
     </td>
     <td>
       <strong>Subscription Lifecycle Supervisor</strong><br/>
-      <small>Local-first dashboard to track subscriptions, plans, and trial periods.</small><br/>
+      <small>Local-first dashboard for subscriptions, billing cycles, and trials.</small><br/>
       <a href="https://subscription-lifecycle-supervisor.vercel.app/" target="_blank">
-        <img src="https://img.shields.io/badge/Deploy%20on%20Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Deploy on Vercel" height="20">
+        <img src="https://img.shields.io/badge/Open%20deploy-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Open deploy" height="20">
       </a>
     </td>
   </tr>
@@ -47,223 +52,174 @@ The goal of the project is to return control over billing and expiration cycles 
 
 ---
 
-## 📌 Table of Contents
+## Table of Contents
 
-1. [🎯 The Problem](#-the-problem)
-2. [💡 The Solution](#-the-solution)
-3. [✨ MVP Features](#-mvp-features)
-4. [🚧 MVP Limitations](#-mvp-limitations)
-5. [⚡ Technologies](#-technologies)
-6. [🚀 How to Run Locally](#-how-to-run-locally)
-7. [📦 Static Delivery](#-static-delivery)
-8. [🧪 Validation](#-validation)
-9. [📁 Project Structure](#-project-structure)
-
----
-
-## 🎯 The Problem
-
-Monthly subscriptions, annual charges, free licenses that expire, and short trials are easy to forget. The result is often a mix of unexpected charges, duplicated services, and a lack of clarity about the real cost of digital life.
-
-Spreadsheets solve part of the problem but add friction. Full-fledged financial apps can be overkill for those who just want to understand and track their subscriptions.
+1. [MVP Status](#mvp-status)
+2. [The Problem](#the-problem)
+3. [The Solution](#the-solution)
+4. [Delivered Features](#delivered-features)
+5. [Security and Privacy](#security-and-privacy)
+6. [Technologies Used](#technologies-used)
+7. [How to Run Locally](#how-to-run-locally)
+8. [Tests and Build](#tests-and-build)
+9. [Project Structure](#project-structure)
+10. [Post-MVP Roadmap](#post-mvp-roadmap)
 
 ---
 
-## 💡 The Solution
+## MVP Status
 
-The product was built as a simple, visual, and local-first web application:
+| Item | State |
+| --- | --- |
+| MVP | Complete |
+| Documentation closure | 2026-08-13 |
+| Deploy | https://subscription-lifecycle-supervisor.vercel.app/ |
+| Architecture | Single-route Vue SPA, local-first |
+| Persistence | IndexedDB via Dexie |
+| Automated validation | Vitest, Vue Test Utils, Playwright, and GitHub Actions |
+| Integrated post-MVP evolutions | Visual redesign, light theme, English UI, and UI modularization |
 
-- **Visual-first:** subscriptions are displayed in clear cards, with status, value, cycle, relevant dates, and the service's visual identity when available in the local catalog.
-- **Local-first:** data is persisted in the user's browser, with no backend, login, or remote database in the MVP.
-- **Lifecycle focus:** the app prioritizes renewals, trials nearing expiration, ended subscriptions, and archived items.
+## The Problem
 
----
+Monthly subscriptions, annual charges, free licenses that expire, and short
+trials are easy to forget. The result is often a mix of unexpected charges,
+duplicated services, and a lack of clarity about the real cost of digital life.
 
-## ✨ MVP Features
+Spreadsheets solve part of the problem but add friction. Full financial apps can
+be too much for users who only want to understand and track their subscriptions.
 
-- Dashboard with normalized monthly costs and annual projections.
-- Quick registration for paid, free, educational, or trial subscriptions.
-- Initial local catalog of known services.
-- Assisted auto-fill of name, color, category, and local logo when the service exists in the catalog.
-- Visual alerts for trials nearing expiration.
-- Editing, ending, and archiving of subscriptions.
-- Local persistence via IndexedDB.
-- Offline support as a PWA.
-- Automated unit/component tests and E2E tests for core flows.
-- CI validation for build, tests, lint, and E2E in Chromium.
+## The Solution
 
----
+The project delivers a simple, visual, and local dashboard for subscription
+cycles:
 
-## 🚧 MVP Limitations
+- **Clear dashboard:** normalized monthly total, yearly projection, counters,
+  and trial alerts.
+- **Fast registration:** paid, free, educational, or trial subscriptions with
+  domain validation.
+- **Complete lifecycle:** edit, end, archive, unarchive, and undo archive.
+- **Local-first experience:** data persisted in the browser with IndexedDB.
+- **Daily-use UI:** compact interface, light/dark theme, and Portuguese/English
+  support.
 
-The MVP does not include a backend, login, remote account, remote database, cross-device synchronization, analytics, real push notifications, import/export, or external runtime calls. Data stays in the user's browser; clearing site data in the browser also removes local records.
+## Delivered Features
 
----
+- Accessible form modal with catalog selection, free service entry, and assisted
+  metadata fill.
+- Expanded local catalog with streaming, productivity, development, design, AI,
+  education, and gaming services.
+- Responsive cards with status, price, cycle, relevant date, visual identity,
+  and trial-near-end alert.
+- Confirmation dialog for lifecycle actions and toast for undoing archive.
+- Pinia store with loading, empty, recoverable error, and loaded states.
+- Local persistence with Dexie/IndexedDB.
+- PWA with static build and offline shell.
+- Dark theme by default, optional light theme, and public UI in Portuguese or
+  English.
+- Unit, component, and E2E tests for the main flows.
+- CI with build, tests, lint, and Playwright in Chromium.
 
-## ⚡ Technologies
+## Security and Privacy
+
+- No data is sent to a first-party backend.
+- There is no login, remote account, remote database, analytics, or cross-device
+  synchronization.
+- Subscriptions stay in the user's browser IndexedDB.
+- Clearing site data in the browser also removes local records.
+- External catalog logos are only a visual enhancement; when they do not load,
+  the app uses a local fallback based on service initial and brand color.
+
+## Technologies Used
 
 - Vue 3 with Composition API.
-- Vite.
+- Vite 8.
 - Modern JavaScript.
 - Pinia.
 - Dexie.js over IndexedDB.
 - vite-plugin-pwa.
-- Modular CSS with design tokens.
+- Native modular CSS with design tokens.
 - Vitest, Vue Test Utils, and Playwright.
 
----
-
-## 🚀 How to Run Locally
-
-Requirements:
-
-- Node.js 20.19 or higher.
-- npm.
-
-Main commands:
+## How to Run Locally
 
 ```bash
 npm install
 npm run dev
-npm run build
-npm run test
-npm run test:e2e
-npm run lint
 ```
 
-To run E2E tests for the first time in this environment, install the browser used by Playwright:
+## Tests and Build
+
+```bash
+npm run build
+npm run test
+npm run lint
+npm run test:e2e
+```
+
+To run E2E tests for the first time in this environment, install the browser
+used by Playwright:
 
 ```bash
 npx playwright install chromium
 ```
 
----
+## Project Structure
 
-## 📦 Static Delivery
-
-The production build is generated in `dist/`:
-
-```bash
-npm run build
-```
-
-The content in `dist/` can be published to a static host. The project has no automated deployment configured, requires no secrets, and does not depend on a runtime backend.
-
----
-
-## 🧪 Validation
-
-Before delivering a change, run:
-
-```bash
-npm run build
-npm run test
-npm run lint
-npm run test:e2e
-```
-
-The GitHub Actions CI runs the same core validation on `push` and `pull_request` to `main`, including the installation of Playwright's Chromium in the CI environment.
-
----
-
-## 📁 Project Structure
-
-Current public structure:
+Public structure tracked in Git:
 
 ```text
 subscription-lifecycle-supervisor/
   .github/
     workflows/
-      ci.yml
-  .gitignore
-  README.md
-  eslint.config.js
+  public/
+    assets/
+      logos/
+    fonts/
+      figtree/
+  src/
+    app/
+    core/
+      dates/
+      money/
+    domain/
+      services/
+      subscriptions/
+    features/
+      subscription-card/
+      subscription-form/
+    infrastructure/
+      db/
+      pwa/
+      subscriptions/
+    shared/
+      components/
+      i18n/
+      styles/
+      theme/
+    stores/
+      subscriptions/
+  tests/
+    e2e/
   index.html
   package.json
   package-lock.json
-  playwright.config.js
+  README.md
+  README.en.md
   vite.config.js
-  public/
-    icons/
-      app-icon.svg
-      pwa-icon-192.png
-      pwa-icon-512.png
-      pwa-maskable-512.png
-  src/
-    app/
-      App.vue
-      App.test.js
-      main.js
-    core/
-      dates/
-        dates.test.js
-        index.js
-      money/
-        index.js
-        money.test.js
-    domain/
-      services/
-        catalog.js
-        constants.js
-        index.js
-        lookup.js
-        normalization.js
-        service-catalog.test.js
-      subscriptions/
-        constants.js
-        index.js
-        normalization.js
-        summary.js
-        summary.test.js
-        subscription.test.js
-        validation.js
-    features/
-      subscription-card/
-        SubscriptionCard.vue
-        SubscriptionCard.test.js
-        index.js
-      subscription-form/
-        NewSubscriptionForm.vue
-        NewSubscriptionForm.test.js
-        index.js
-    infrastructure/
-      db/
-        database.js
-        database.test.js
-        index.js
-        schema.js
-        settingsSeed.js
-      pwa/
-        config.js
-        config.test.js
-      subscriptions/
-        index.js
-        mappers.js
-        mappers.test.js
-        repository.js
-        repository.test.js
-    stores/
-      subscriptions/
-        index.js
-        store.js
-        store.test.js
-    shared/
-      components/
-        BaseButton.vue
-        StatePanel.vue
-        StatusBadge.vue
-        SummaryMetric.vue
-        index.js
-        shared-components.test.js
-      styles/
-        base.css
-        index.css
-        tokens.css
-  tests/
-    e2e/
-      main-flows.spec.js
+  playwright.config.js
+  eslint.config.js
 ```
 
-This section tracks only the actual public structure of the project and should be updated when public files and directories are created, removed, moved, or renamed.
+## Post-MVP Roadmap
+
+- Manual local backup export/import.
+- Monthly financial history.
+- Advanced filters by category, status, and cost.
+- Local catalog and logo customization.
+- Currency configuration.
 
 ---
+
+<div align="center">
+Built by <b>Pedro Labre</b>
+</div>
