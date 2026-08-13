@@ -1,11 +1,6 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
-import {
-  SUBSCRIPTIONS_STORE_STATUS,
-  useSubscriptionsStore,
-} from '../stores/subscriptions/index.js';
-import { SUBSCRIPTION_STATUS } from '../domain/subscriptions/index.js';
-import { formatCurrency } from '../core/money/index.js';
+import { computed } from 'vue';
+import { useSubscriptionsStore } from '../stores/subscriptions/index.js';
 import {
   AppLogo,
   BaseButton,
@@ -23,209 +18,69 @@ import {
   NewSubscriptionForm,
   SubscriptionFormDialog,
 } from '../features/subscription-form/index.js';
+import { getSubscriptionKey } from './subscriptionViewUtils.js';
+import { useSubscriptionDashboard } from './useSubscriptionDashboard.js';
+import { useSubscriptionReferenceDate } from './useSubscriptionReferenceDate.js';
+import { useSubscriptionWorkflow } from './useSubscriptionWorkflow.js';
 
 const { formatNumber, locale, t, tc } = useLocale();
 const productName = computed(() => t('app.productName'));
 const subscriptionsStore = useSubscriptionsStore();
-const isSubscriptionFormOpen = ref(false);
-const editingSubscription = ref(null);
-const isSubmittingSubscription = ref(false);
-const isRunningLifecycleAction = ref(false);
-const subscriptionFormError = ref(null);
-const subscriptionActionError = ref(null);
-const currentDate = ref(new Date());
-let currentDateTimer = null;
 
-syncCurrentDate();
-
-const storeStatusMessageKeys = {
-  [SUBSCRIPTIONS_STORE_STATUS.IDLE]: 'storeStatus.idle',
-  [SUBSCRIPTIONS_STORE_STATUS.LOADING]: 'storeStatus.loading',
-  [SUBSCRIPTIONS_STORE_STATUS.EMPTY]: 'storeStatus.empty',
-  [SUBSCRIPTIONS_STORE_STATUS.ERROR]: 'storeStatus.error',
-  [SUBSCRIPTIONS_STORE_STATUS.LOADED]: 'storeStatus.loaded',
-};
-
-const storeStatusLabel = computed(
-  () =>
-    t(
-      storeStatusMessageKeys[subscriptionsStore.status] ??
-        storeStatusMessageKeys[SUBSCRIPTIONS_STORE_STATUS.IDLE],
-    ),
-);
-
-const isLoadingState = computed(() =>
-  [
-    SUBSCRIPTIONS_STORE_STATUS.IDLE,
-    SUBSCRIPTIONS_STORE_STATUS.LOADING,
-  ].includes(subscriptionsStore.status),
-);
-
-const hasLoadError = computed(() => Boolean(subscriptionsStore.loadError));
-
-const isErrorState = computed(
-  () =>
-    hasLoadError.value &&
-    (subscriptionsStore.status === SUBSCRIPTIONS_STORE_STATUS.ERROR ||
-      !subscriptionsStore.hasSubscriptions),
-);
-
-const isEmptyState = computed(
-  () =>
-    subscriptionsStore.status === SUBSCRIPTIONS_STORE_STATUS.EMPTY ||
-    subscriptionsStore.isEmpty,
-);
-
-const isLoadedState = computed(
-  () =>
-    subscriptionsStore.status === SUBSCRIPTIONS_STORE_STATUS.LOADED ||
-    (subscriptionsStore.isLoaded && subscriptionsStore.hasSubscriptions),
-);
-
-const errorMessage = computed(
-  () =>
-    subscriptionsStore.loadError?.message ??
-    subscriptionsStore.error?.message ??
-    t('errors.loadSubscriptions'),
-);
-
-const trialAlerts = computed(() =>
-  Array.isArray(subscriptionsStore.trialAlerts)
-    ? subscriptionsStore.trialAlerts
-    : [],
-);
-
-const trialAlertCount = computed(() => trialAlerts.value.length);
-
-const hasTrialAlerts = computed(() => trialAlertCount.value > 0);
-
-const trialAlertSummary = computed(
-  () => tc('summary.trialAlertSummary', trialAlertCount.value),
-);
-
-const trialAlertDetail = computed(() => {
-  const names = trialAlerts.value
-    .map((subscription) => normalizeSubscriptionName(subscription))
-    .filter(Boolean);
-
-  if (names.length === 0) {
-    return t('summary.trialAlertDetailFallback');
-  }
-
-  if (names.length <= 2) {
-    return formatNameList(names);
-  }
-
-  return t('summary.trialMoreNames', {
-    count: formatCount(names.length - 2),
-    names: formatNameList(names.slice(0, 2)),
-  });
+const { currentDate } = useSubscriptionReferenceDate(subscriptionsStore, {
+  loadSubscriptions,
 });
 
-const summaryMetrics = computed(() => [
-  {
-    label: t('summary.monthly.label'),
-    value: formatCurrency(subscriptionsStore.monthlyTotal, {
-      locale: locale.value,
-    }),
-    detail: t('summary.monthly.detail'),
-  },
-  {
-    label: t('summary.yearly.label'),
-    value: formatCurrency(subscriptionsStore.yearlyProjection, {
-      locale: locale.value,
-    }),
-    detail: t('summary.yearly.detail'),
-  },
-  {
-    label: t('summary.active.label'),
-    value: formatCount(subscriptionsStore.activeCount),
-    detail: t('summary.active.detail'),
-  },
-  {
-    label: t('summary.trials.label'),
-    value: formatCount(subscriptionsStore.trialCount),
-    detail: tc('summary.trialAlertsDetail', trialAlertCount.value),
-  },
-  {
-    label: t('summary.ended.label'),
-    value: formatCount(subscriptionsStore.endedCount),
-    detail: tc('summary.archivedDetail', subscriptionsStore.archivedCount),
-  },
-]);
-
-const subscriptionCards = computed(() => {
-  const summaryItems = subscriptionsStore.summary?.items;
-
-  return Array.isArray(summaryItems) && summaryItems.length > 0
-    ? summaryItems
-    : subscriptionsStore.subscriptions;
+const {
+  errorMessage,
+  hasTrialAlerts,
+  isEmptyState,
+  isErrorState,
+  isLoadedState,
+  isLoadingState,
+  storeStatusLabel,
+  subscriptionCards,
+  subscriptionsListLabel,
+  summaryMetrics,
+  trialAlertDetail,
+  trialAlertSummary,
+} = useSubscriptionDashboard({
+  formatNumber,
+  locale,
+  subscriptionsStore,
+  t,
+  tc,
 });
 
-const subscriptionsListLabel = computed(() => {
-  const count = subscriptionCards.value.length;
-
-  return tc('summary.listCount', count);
+const {
+  areCardActionsDisabled,
+  clearSubscriptionFormError,
+  closeConfirmDialog,
+  closeSubscriptionForm,
+  confirmDialogState,
+  dismissToast,
+  editingSubscription,
+  handleConfirmedAction,
+  handleUndoToastAction,
+  isSubmittingSubscription,
+  isSubscriptionFormOpen,
+  openEditSubscriptionForm,
+  openSubscriptionForm,
+  requestArchiveSubscription,
+  requestEndSubscription,
+  submitSubscription,
+  subscriptionActionError,
+  subscriptionActionErrorMessage,
+  subscriptionDialogEyebrow,
+  subscriptionDialogTitle,
+  subscriptionFormError,
+  subscriptionFormKey,
+  subscriptionFormMode,
+  toastState,
+} = useSubscriptionWorkflow({
+  subscriptionsStore,
+  t,
 });
-
-const subscriptionFormMode = computed(() =>
-  editingSubscription.value ? 'edit' : 'create',
-);
-
-const subscriptionDialogEyebrow = computed(() =>
-  editingSubscription.value ? t('dialog.editEyebrow') : t('dialog.createEyebrow'),
-);
-
-const subscriptionDialogTitle = computed(() =>
-  editingSubscription.value ? t('dialog.editTitle') : t('dialog.createTitle'),
-);
-
-const subscriptionFormKey = computed(
-  () =>
-    `${subscriptionFormMode.value}-${
-      resolveSubscriptionId(editingSubscription.value) || 'new'
-    }`,
-);
-
-const subscriptionActionErrorMessage = computed(
-  () =>
-    subscriptionActionError.value?.message ??
-    t('errors.updateSubscription'),
-);
-
-const areCardActionsDisabled = computed(
-  () =>
-    isSubscriptionFormOpen.value ||
-    isSubmittingSubscription.value ||
-    isRunningLifecycleAction.value,
-);
-
-onMounted(() => {
-  updateCurrentDate();
-  currentDateTimer = setInterval(updateCurrentDate, 60 * 1000);
-  currentDateTimer?.unref?.();
-
-  if (!subscriptionsStore.isLoaded && !subscriptionsStore.isLoading) {
-    loadSubscriptions();
-  }
-});
-
-onUnmounted(() => {
-  if (currentDateTimer !== null) {
-    clearInterval(currentDateTimer);
-  }
-});
-
-function updateCurrentDate() {
-  currentDate.value = new Date();
-  syncCurrentDate();
-}
-
-function syncCurrentDate() {
-  if (typeof subscriptionsStore.setReferenceDate === 'function') {
-    subscriptionsStore.setReferenceDate(currentDate.value);
-  }
-}
 
 function loadSubscriptions() {
   return subscriptionsStore.load().catch(() => undefined);
@@ -235,331 +90,6 @@ function retrySubscriptionsLoad() {
   return subscriptionsStore.reload().catch(() => undefined);
 }
 
-function openSubscriptionForm() {
-  editingSubscription.value = null;
-  isSubscriptionFormOpen.value = true;
-  clearSubscriptionFormError();
-  clearSubscriptionActionError();
-}
-
-function openEditSubscriptionForm(subscription) {
-  const subscriptionId = resolveSubscriptionId(subscription);
-
-  if (!subscriptionId) {
-    subscriptionActionError.value = createLocalMutationError(
-      t('errors.missingSubscriptionIdForEdit'),
-    );
-    return;
-  }
-
-  editingSubscription.value =
-    resolvePersistedSubscription(subscriptionId) ?? subscription;
-  isSubscriptionFormOpen.value = true;
-  clearSubscriptionFormError();
-  clearSubscriptionActionError();
-}
-
-function closeSubscriptionForm() {
-  isSubscriptionFormOpen.value = false;
-  editingSubscription.value = null;
-  clearSubscriptionFormError();
-}
-
-function clearSubscriptionFormError() {
-  subscriptionFormError.value = null;
-}
-
-function clearSubscriptionActionError() {
-  subscriptionActionError.value = null;
-}
-
-async function submitSubscription(payload) {
-  isSubmittingSubscription.value = true;
-  clearSubscriptionFormError();
-  clearSubscriptionActionError();
-
-  try {
-    if (editingSubscription.value) {
-      const subscriptionId = resolveSubscriptionId(editingSubscription.value);
-
-      if (!subscriptionId) {
-        throw createLocalMutationError(
-          t('errors.missingSubscriptionIdForEdit'),
-        );
-      }
-
-      await subscriptionsStore.update(subscriptionId, payload);
-    } else {
-      await subscriptionsStore.create(payload);
-    }
-
-    closeSubscriptionForm();
-  } catch (cause) {
-    subscriptionFormError.value =
-      subscriptionsStore.mutationError ??
-      normalizeMutationError(
-        cause,
-        t('errors.saveSubscription'),
-      );
-  } finally {
-    isSubmittingSubscription.value = false;
-  }
-}
-
-const confirmDialogState = ref({
-  open: false,
-  title: '',
-  message: '',
-  confirmLabel: '',
-  tone: 'archive',
-  targetSubscription: null,
-  action: null,
-});
-
-const toastState = ref({
-  visible: false,
-  message: '',
-  actionLabel: '',
-  subscriptionId: null,
-  previousStatus: null,
-});
-
-function requestArchiveSubscription(subscription) {
-  const name = normalizeSubscriptionName(subscription) || t('card.fallbackName');
-  const isArchived = subscription?.status === SUBSCRIPTION_STATUS.ARCHIVED;
-
-  if (isArchived) {
-    confirmDialogState.value = {
-      open: true,
-      title: t('confirmDialog.unarchiveTitle'),
-      message: t('confirmDialog.unarchiveMessage', { name }),
-      confirmLabel: t('confirmDialog.unarchiveConfirm'),
-      tone: 'archive',
-      targetSubscription: subscription,
-      action: 'unarchive',
-    };
-    return;
-  }
-
-  confirmDialogState.value = {
-    open: true,
-    title: t('confirmDialog.archiveTitle'),
-    message: t('confirmDialog.archiveMessage', { name }),
-    confirmLabel: t('confirmDialog.archiveConfirm'),
-    tone: 'archive',
-    targetSubscription: subscription,
-    action: 'archive',
-  };
-}
-
-function requestEndSubscription(subscription) {
-  const name = normalizeSubscriptionName(subscription) || t('card.fallbackName');
-
-  confirmDialogState.value = {
-    open: true,
-    title: t('confirmDialog.endTitle'),
-    message: t('confirmDialog.endMessage', { name }),
-    confirmLabel: t('confirmDialog.endConfirm'),
-    tone: 'end',
-    targetSubscription: subscription,
-    action: 'end',
-  };
-}
-
-function closeConfirmDialog() {
-  confirmDialogState.value.open = false;
-}
-
-async function handleConfirmedAction() {
-  const { action, targetSubscription } = confirmDialogState.value;
-  closeConfirmDialog();
-
-  if (!targetSubscription) {
-    return;
-  }
-
-  const subscriptionId = resolveSubscriptionId(targetSubscription);
-  const name = normalizeSubscriptionName(targetSubscription) || t('card.fallbackName');
-  const previousStatus = String(targetSubscription.status || 'active');
-
-  if (action === 'archive') {
-    await archiveSubscription(targetSubscription);
-
-    toastState.value = {
-      visible: true,
-      message: t('toast.archived', { name }),
-      actionLabel: t('toast.undo'),
-      subscriptionId,
-      previousStatus,
-    };
-  } else if (action === 'unarchive') {
-    await subscriptionsStore.update(subscriptionId, {
-      status: SUBSCRIPTION_STATUS.ACTIVE,
-    });
-
-    toastState.value = {
-      visible: true,
-      message: t('toast.unarchived', { name }),
-      actionLabel: '',
-      subscriptionId: null,
-      previousStatus: null,
-    };
-  } else if (action === 'end') {
-    await endSubscription(targetSubscription);
-
-    toastState.value = {
-      visible: true,
-      message: t('toast.ended', { name }),
-      actionLabel: '',
-      subscriptionId: null,
-      previousStatus: null,
-    };
-  }
-}
-
-async function handleUndoToastAction() {
-  const { subscriptionId, previousStatus } = toastState.value;
-  toastState.value.visible = false;
-
-  if (!subscriptionId) {
-    return;
-  }
-
-  try {
-    const targetStatus =
-      previousStatus && previousStatus !== 'archived'
-        ? previousStatus
-        : 'active';
-
-    await subscriptionsStore.update(subscriptionId, {
-      status: targetStatus,
-    });
-
-    toastState.value = {
-      visible: true,
-      message: t('toast.undone'),
-      actionLabel: '',
-      subscriptionId: null,
-      previousStatus: null,
-    };
-  } catch (cause) {
-    subscriptionActionError.value =
-      subscriptionsStore.mutationError ??
-      normalizeMutationError(cause, t('errors.updateSubscription'));
-  }
-}
-
-function dismissToast() {
-  toastState.value.visible = false;
-}
-
-async function archiveSubscription(subscription) {
-  await runLifecycleMutation(
-    subscription,
-    'archive',
-    t('errors.archiveSubscription'),
-  );
-}
-
-async function endSubscription(subscription) {
-  await runLifecycleMutation(
-    subscription,
-    'end',
-    t('errors.endSubscription'),
-  );
-}
-
-async function runLifecycleMutation(subscription, action, fallbackMessage) {
-  if (isRunningLifecycleAction.value) {
-    return;
-  }
-
-  const subscriptionId = resolveSubscriptionId(subscription);
-
-  if (!subscriptionId) {
-    subscriptionActionError.value = createLocalMutationError(
-      t('errors.missingSubscriptionId'),
-    );
-    return;
-  }
-
-  isRunningLifecycleAction.value = true;
-  clearSubscriptionActionError();
-  clearSubscriptionFormError();
-
-  try {
-    await subscriptionsStore[action](subscriptionId);
-  } catch (cause) {
-    subscriptionActionError.value =
-      subscriptionsStore.mutationError ??
-      normalizeMutationError(cause, fallbackMessage);
-  } finally {
-    isRunningLifecycleAction.value = false;
-  }
-}
-
-function getSubscriptionKey(subscription, index) {
-  return (
-    subscription.id ??
-    `${subscription.serviceName ?? 'subscription'}-${index}`
-  );
-}
-
-function formatCount(value) {
-  return formatNumber(normalizeCount(value));
-}
-
-function normalizeCount(value) {
-  const count = Number(value);
-
-  return Number.isFinite(count) && count > 0 ? Math.trunc(count) : 0;
-}
-
-function normalizeSubscriptionName(subscription) {
-  const name = subscription?.serviceName ?? subscription?.service?.name;
-
-  return typeof name === 'string' && name.trim() ? name.trim() : '';
-}
-
-function formatNameList(names) {
-  return new Intl.ListFormat(locale.value, {
-    style: 'long',
-    type: 'conjunction',
-  }).format(names);
-}
-
-function resolveSubscriptionId(subscription) {
-  const id = subscription?.id;
-
-  return typeof id === 'string' && id.trim() ? id.trim() : '';
-}
-
-function resolvePersistedSubscription(subscriptionId) {
-  const subscriptions = Array.isArray(subscriptionsStore.subscriptions)
-    ? subscriptionsStore.subscriptions
-    : [];
-
-  return (
-    subscriptions.find(
-      (subscription) => resolveSubscriptionId(subscription) === subscriptionId,
-    ) ?? null
-  );
-}
-
-function normalizeMutationError(cause, fallbackMessage) {
-  if (cause && typeof cause === 'object') {
-    return cause;
-  }
-
-  return createLocalMutationError(fallbackMessage);
-}
-
-function createLocalMutationError(message) {
-  return {
-    message,
-    details: {},
-  };
-}
 </script>
 
 <template>

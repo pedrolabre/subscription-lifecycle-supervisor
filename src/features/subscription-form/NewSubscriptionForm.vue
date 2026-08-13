@@ -1,49 +1,8 @@
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
-import {
-  BILLING_CYCLES,
-  SUBSCRIPTION_FIELD_LIMITS,
-  SUBSCRIPTION_STATUS,
-  SUBSCRIPTION_TYPES,
-  validateSubscriptionPayload,
-} from '../../domain/subscriptions/index.js';
-import {
-  createFreeformService,
-  findServiceById,
-  findServiceByName,
-  getServiceCatalog,
-  normalizeServiceText,
-  searchServices,
-} from '../../domain/services/index.js';
+import { SUBSCRIPTION_FIELD_LIMITS } from '../../domain/subscriptions/index.js';
 import { BaseButton } from '../../shared/components/index.js';
 import { useLocale } from '../../shared/i18n/index.js';
-
-const ACCESS_KINDS = Object.freeze({
-  PAID: 'paid',
-  FREE: 'free',
-  EDUCATIONAL: 'educational',
-  TRIAL: 'trial',
-});
-
-const FORM_MODES = Object.freeze({
-  CREATE: 'create',
-  EDIT: 'edit',
-});
-
-const accessKindValues = Object.freeze([
-  ACCESS_KINDS.PAID,
-  ACCESS_KINDS.FREE,
-  ACCESS_KINDS.EDUCATIONAL,
-  ACCESS_KINDS.TRIAL,
-]);
-
-const paidBillingValues = Object.freeze([
-  BILLING_CYCLES.MONTHLY,
-  BILLING_CYCLES.YEARLY,
-  BILLING_CYCLES.LIFETIME,
-]);
-
-const serviceCatalog = getServiceCatalog();
+import { useSubscriptionForm } from './useSubscriptionForm.js';
 
 const props = defineProps({
   creationError: {
@@ -85,459 +44,45 @@ const emit = defineEmits(['cancel', 'change', 'submit']);
 
 const { locale, t, translateValidationError } = useLocale();
 
-const form = reactive({
-  accessKind: ACCESS_KINDS.PAID,
-  billingCycle: BILLING_CYCLES.MONTHLY,
-  price: '',
-  renewalDate: '',
-  serviceName: '',
-  startDate: '',
-  trialEndDate: '',
-});
-
-const localValidationErrors = ref([]);
-const localFormErrorKey = ref('');
-const selectedServiceId = ref('');
-const hasClearedCatalogSelection = ref(false);
-const errorSummaryRef = ref(null);
-const serviceNameInput = ref(null);
-const startDateInput = ref(null);
-const priceInput = ref(null);
-const billingCycleSelect = ref(null);
-const renewalDateInput = ref(null);
-const trialEndDateInput = ref(null);
-
-const fieldFocusTargets = {
-  billingCycle: billingCycleSelect,
-  price: priceInput,
-  renewalDate: renewalDateInput,
-  serviceName: serviceNameInput,
-  startDate: startDateInput,
-  trialEndDate: trialEndDateInput,
-};
-
-const isEditing = computed(
-  () => props.mode === FORM_MODES.EDIT && isRecord(props.subscription),
-);
-const isPaidAccess = computed(() => form.accessKind === ACCESS_KINDS.PAID);
-const isTrialAccess = computed(() => form.accessKind === ACCESS_KINDS.TRIAL);
-const isEducationalAccess = computed(
-  () => form.accessKind === ACCESS_KINDS.EDUCATIONAL,
-);
-const requiresRenewalDate = computed(
-  () =>
-    isPaidAccess.value &&
-    [BILLING_CYCLES.MONTHLY, BILLING_CYCLES.YEARLY].includes(
-      form.billingCycle,
-    ),
-);
-
-const resolvedSubmissionError = computed(
-  () => props.submissionError ?? props.creationError,
-);
-
-const externalFieldErrors = computed(() =>
-  createFieldErrorMap(resolveCreationErrors(resolvedSubmissionError.value)),
-);
-
-const fieldErrors = computed(() => ({
-  ...createFieldErrorMap(localValidationErrors.value),
-  ...externalFieldErrors.value,
-}));
-
-const formError = computed(
-  () =>
-    (localFormErrorKey.value ? t(localFormErrorKey.value) : '') ||
-    normalizeErrorMessage(resolvedSubmissionError.value),
-);
-
-const formTitle = computed(() =>
-  isEditing.value ? t('dialog.editTitle') : t('dialog.createTitle'),
-);
-
-const formDescribedBy = computed(() =>
-  formError.value ? 'subscription-form-error-summary' : undefined,
-);
-
-const submitButtonText = computed(() => {
-  if (props.isSubmitting) {
-    return isEditing.value ? t('form.submitEditBusy') : t('form.submitCreateBusy');
-  }
-
-  return isEditing.value ? t('form.submitEdit') : t('form.submitCreate');
-});
-
-const accessKindOptions = computed(() =>
-  accessKindValues.map((value) => ({
-    label: t(`form.accessKinds.${value}`),
-    value,
-  })),
-);
-
-const paidBillingOptions = computed(() =>
-  paidBillingValues.map((value) => ({
-    label: t(`billingCycles.${value}`),
-    value,
-  })),
-);
-
-const selectedCatalogService = computed(() =>
-  findServiceById(selectedServiceId.value),
-);
-
-const hasSelectedCatalogService = computed(() =>
-  Boolean(selectedCatalogService.value),
-);
-
-const serviceSearchResults = computed(() =>
-  searchServices(form.serviceName, { limit: 5 }),
-);
-
-watch(
-  () => [props.mode, props.subscription],
-  () => {
-    resetForm();
-  },
-  { immediate: true },
-);
-
-watch(
+const {
+  accessKindOptions,
+  billingCycleSelect,
+  clearCatalogSelection,
+  emitCancel,
+  errorSummaryRef,
+  fieldErrors,
   form,
-  () => {
-    localValidationErrors.value = [];
-    localFormErrorKey.value = '';
-    emit('change');
-  },
-  { deep: true },
-);
-
-watch(
-  () => form.serviceName,
-  (value) => {
-    const selectedService = selectedCatalogService.value;
-
-    if (!selectedService) {
-      return;
-    }
-
-    const matchingService = findServiceByName(value);
-
-    if (matchingService?.id !== selectedService.id) {
-      selectedServiceId.value = '';
-      hasClearedCatalogSelection.value = true;
-    }
-  },
-);
-
-onMounted(() => {
-  nextTick(() => {
-    serviceNameInput.value?.focus();
-  });
+  formDescribedBy,
+  formError,
+  formTitle,
+  hasSelectedCatalogService,
+  isEducationalAccess,
+  isPaidAccess,
+  isSelectedService,
+  isTrialAccess,
+  paidBillingOptions,
+  priceInput,
+  renewalDateInput,
+  requiresRenewalDate,
+  selectedCatalogService,
+  selectedServiceId,
+  selectCatalogService,
+  selectCatalogServiceId,
+  serviceCatalog,
+  serviceNameInput,
+  serviceSearchResults,
+  startDateInput,
+  submitButtonText,
+  submitForm,
+  trialEndDateInput,
+} = useSubscriptionForm({
+  emit,
+  locale,
+  props,
+  t,
+  translateValidationError,
 });
 
-function submitForm() {
-  if (props.isSubmitting) {
-    return;
-  }
-
-  const validation = validateSubscriptionPayload(createSubscriptionPayload());
-
-  if (!validation.isValid) {
-    localValidationErrors.value = validation.errors;
-    localFormErrorKey.value = 'form.errors.fixHighlightedFields';
-    focusFirstInvalidField(validation.errors);
-    return;
-  }
-
-  localValidationErrors.value = [];
-  localFormErrorKey.value = '';
-  emit('submit', validation.value);
-}
-
-function emitCancel() {
-  emit('cancel');
-}
-
-function focusFirstInvalidField(errors) {
-  const firstInvalidField = errors
-    .map((error) => normalizeText(error?.field))
-    .find((field) => Boolean(fieldFocusTargets[field]?.value));
-
-  nextTick(() => {
-    const target = firstInvalidField
-      ? fieldFocusTargets[firstInvalidField]?.value
-      : null;
-
-    (target ?? errorSummaryRef.value)?.focus?.();
-  });
-}
-
-function createSubscriptionPayload() {
-  const basePayload = {
-    ...createHiddenPayload(),
-    serviceName: form.serviceName,
-    startDate: form.startDate,
-  };
-
-  if (form.accessKind === ACCESS_KINDS.FREE) {
-    return createNonPaidPayload(basePayload, SUBSCRIPTION_TYPES.FREE);
-  }
-
-  if (form.accessKind === ACCESS_KINDS.EDUCATIONAL) {
-    return {
-      ...basePayload,
-      billingCycle: BILLING_CYCLES.NONE,
-      price: 0,
-      renewalDate: null,
-      status: resolvePayloadStatus(),
-      trialEndDate: form.trialEndDate,
-      type: SUBSCRIPTION_TYPES.EDUCATIONAL,
-    };
-  }
-
-  if (form.accessKind === ACCESS_KINDS.TRIAL) {
-    return {
-      ...basePayload,
-      billingCycle: BILLING_CYCLES.NONE,
-      price: 0,
-      renewalDate: null,
-      status: resolvePayloadStatus(),
-      trialEndDate: form.trialEndDate,
-      type: SUBSCRIPTION_TYPES.FREE,
-    };
-  }
-
-  return {
-    ...basePayload,
-    billingCycle: form.billingCycle,
-    price: form.price,
-    renewalDate: requiresRenewalDate.value ? form.renewalDate : null,
-    status: resolvePayloadStatus(),
-    trialEndDate: null,
-    type: SUBSCRIPTION_TYPES.PAID,
-  };
-}
-
-function createNonPaidPayload(basePayload, type) {
-  return {
-    ...basePayload,
-    billingCycle: BILLING_CYCLES.NONE,
-    price: 0,
-    renewalDate: null,
-    status: resolvePayloadStatus(),
-    trialEndDate: null,
-    type,
-  };
-}
-
-function createHiddenPayload() {
-  const catalogService = selectedCatalogService.value;
-
-  if (catalogService) {
-    return createServiceMetadataPayload(catalogService);
-  }
-
-  return createServiceMetadataPayload(
-    createFreeformService(form.serviceName, createPreservedFreeformOptions()),
-  );
-}
-
-function createServiceMetadataPayload(service) {
-  return {
-    brandColor: service.color ?? null,
-    category: service.category ?? null,
-    icon: service.iconPath ?? null,
-    serviceId: service.id ?? null,
-  };
-}
-
-function createPreservedFreeformOptions() {
-  if (
-    !isEditing.value ||
-    hasClearedCatalogSelection.value ||
-    !hasUnchangedServiceName()
-  ) {
-    return {};
-  }
-
-  return {
-    category: props.subscription?.category,
-    color: props.subscription?.brandColor,
-    iconPath: props.subscription?.icon,
-  };
-}
-
-function resolvePayloadStatus() {
-  if (form.accessKind === ACCESS_KINDS.TRIAL) {
-    return SUBSCRIPTION_STATUS.TRIAL;
-  }
-
-  if (isEditing.value) {
-    const currentStatus = normalizeText(props.subscription?.status);
-
-    if (
-      currentStatus === SUBSCRIPTION_STATUS.ARCHIVED ||
-      currentStatus === SUBSCRIPTION_STATUS.ENDED
-    ) {
-      return currentStatus;
-    }
-  }
-
-  return SUBSCRIPTION_STATUS.ACTIVE;
-}
-
-function resetForm() {
-  const subscription = isEditing.value ? props.subscription : null;
-
-  form.accessKind = resolveAccessKind(subscription);
-  form.billingCycle = resolveBillingCycle(subscription);
-  form.price = formatEditablePrice(subscription?.price);
-  form.renewalDate = normalizeText(subscription?.renewalDate);
-  form.serviceName = normalizeText(subscription?.serviceName);
-  form.startDate = normalizeText(subscription?.startDate);
-  form.trialEndDate = normalizeText(subscription?.trialEndDate);
-  selectedServiceId.value = resolveInitialServiceId(subscription);
-  hasClearedCatalogSelection.value = false;
-  localValidationErrors.value = [];
-  localFormErrorKey.value = '';
-}
-
-function selectCatalogServiceId(serviceId) {
-  const service = findServiceById(serviceId);
-
-  if (!service) {
-    clearCatalogSelection();
-    return;
-  }
-
-  selectCatalogService(service);
-}
-
-function selectCatalogService(service) {
-  if (!isRecord(service)) {
-    return;
-  }
-
-  selectedServiceId.value = service.id;
-  hasClearedCatalogSelection.value = false;
-  form.serviceName = service.name;
-}
-
-function clearCatalogSelection() {
-  selectedServiceId.value = '';
-  hasClearedCatalogSelection.value = true;
-}
-
-function resolveAccessKind(subscription) {
-  if (!isRecord(subscription)) {
-    return ACCESS_KINDS.PAID;
-  }
-
-  if (subscription.status === SUBSCRIPTION_STATUS.TRIAL) {
-    return ACCESS_KINDS.TRIAL;
-  }
-
-  if (subscription.type === SUBSCRIPTION_TYPES.FREE) {
-    return ACCESS_KINDS.FREE;
-  }
-
-  if (subscription.type === SUBSCRIPTION_TYPES.EDUCATIONAL) {
-    return ACCESS_KINDS.EDUCATIONAL;
-  }
-
-  return ACCESS_KINDS.PAID;
-}
-
-function resolveBillingCycle(subscription) {
-  if (
-    isRecord(subscription) &&
-    paidBillingValues.includes(subscription.billingCycle)
-  ) {
-    return subscription.billingCycle;
-  }
-
-  return BILLING_CYCLES.MONTHLY;
-}
-
-function resolveInitialServiceId(subscription) {
-  const service = findServiceById(subscription?.serviceId);
-
-  if (!service || !hasCatalogMetadata(subscription, service)) {
-    return '';
-  }
-
-  return service.id;
-}
-
-function isSelectedService(service) {
-  return service?.id === selectedServiceId.value;
-}
-
-function hasUnchangedServiceName() {
-  return (
-    normalizeServiceText(form.serviceName) ===
-    normalizeServiceText(props.subscription?.serviceName)
-  );
-}
-
-function hasCatalogMetadata(subscription, service) {
-  return (
-    normalizeText(subscription?.brandColor).toLowerCase() === service.color ||
-    normalizeText(subscription?.category) === service.category ||
-    normalizeText(subscription?.icon) === service.iconPath
-  );
-}
-
-function formatEditablePrice(value) {
-  if (value === null || value === undefined || value === '') {
-    return '';
-  }
-
-  const price = Number(value);
-  const decimalSeparator = locale.value === 'en-US' ? '.' : ',';
-
-  return Number.isFinite(price)
-    ? String(price).replace('.', decimalSeparator)
-    : '';
-}
-
-function createFieldErrorMap(errors) {
-  return errors.reduce((result, error) => {
-    const field = normalizeText(error?.field);
-    const message = normalizeText(error?.message);
-    const translatedMessage = translateValidationError(error);
-
-    if (field && (translatedMessage || message) && !result[field]) {
-      result[field] = translatedMessage || message;
-    }
-
-    return result;
-  }, {});
-}
-
-function resolveCreationErrors(error) {
-  if (Array.isArray(error?.errors)) {
-    return error.errors;
-  }
-
-  if (Array.isArray(error?.details?.errors)) {
-    return error.details.errors;
-  }
-
-  return [];
-}
-
-function normalizeErrorMessage(error) {
-  return normalizeText(error?.message);
-}
-
-function normalizeText(value) {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-function isRecord(value) {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
 </script>
 
 <template>
