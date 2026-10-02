@@ -15,6 +15,7 @@ export function normalizeSubscriptionPayload(payload = {}) {
     icon: normalizeOptionalText(source.icon),
     brandColor: normalizeBrandColor(source.brandColor),
     category: normalizeOptionalText(source.category),
+    cancellationUrl: normalizeOptionalText(source.cancellationUrl),
   };
 }
 

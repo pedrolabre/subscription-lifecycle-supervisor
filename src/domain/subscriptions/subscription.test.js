@@ -64,6 +64,7 @@ describe('subscription domain contract', () => {
       icon: '/logos/spotify.svg',
       brandColor: '#1db954',
       category: 'music',
+      cancellationUrl: null,
     });
   });
 
@@ -212,6 +213,36 @@ describe('subscription domain contract', () => {
 
     expect(getErrorCodes(result)).toContain(
       SUBSCRIPTION_ERROR_CODES.TRIAL_END_DATE_REQUIRED,
+    );
+  });
+
+  it('validates optional cancellation URLs', () => {
+    const valid = validateSubscriptionPayload({
+      serviceName: 'Valid Sub',
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      type: SUBSCRIPTION_TYPES.PAID,
+      billingCycle: BILLING_CYCLES.MONTHLY,
+      price: 10,
+      startDate: '2026-08-01',
+      renewalDate: '2026-09-01',
+      cancellationUrl: 'https://example.com/cancel',
+    });
+
+    expect(valid.isValid).toBe(true);
+
+    const invalid = validateSubscriptionPayload({
+      serviceName: 'Invalid Sub',
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      type: SUBSCRIPTION_TYPES.PAID,
+      billingCycle: BILLING_CYCLES.MONTHLY,
+      price: 10,
+      startDate: '2026-08-01',
+      renewalDate: '2026-09-01',
+      cancellationUrl: 'not-a-valid-url',
+    });
+
+    expect(getErrorCodes(invalid)).toContain(
+      SUBSCRIPTION_ERROR_CODES.CANCELLATION_URL_INVALID,
     );
   });
 });

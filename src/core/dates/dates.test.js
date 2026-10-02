@@ -7,7 +7,10 @@ import {
 import {
   DEFAULT_TRIAL_WARNING_WINDOW_DAYS,
   calculateDaysRemaining,
+  calculateNextRenewalDate,
   getTrialEndingSoonSubscriptions,
+  isDateDueToday,
+  isDateOverdue,
   isIsoDate,
   isTrialEndingSoon,
   parseIsoDate,
@@ -125,6 +128,60 @@ describe('date helpers', () => {
         windowDays: 8,
       }),
     ).toBe(true);
+  });
+
+  it('evaluates whether a date is overdue or due today', () => {
+    const today = '2026-08-15';
+
+    expect(isDateOverdue('2026-08-14', today)).toBe(true);
+    expect(isDateOverdue('2026-08-15', today)).toBe(false);
+    expect(isDateOverdue('2026-08-16', today)).toBe(false);
+    expect(isDateOverdue('invalid', today)).toBe(false);
+
+    expect(isDateDueToday('2026-08-15', today)).toBe(true);
+    expect(isDateDueToday('2026-08-14', today)).toBe(false);
+    expect(isDateDueToday('2026-08-16', today)).toBe(false);
+  });
+
+  it('calculates the next monthly renewal date deterministically', () => {
+    const today = '2026-08-15';
+
+    expect(calculateNextRenewalDate('2026-08-15', BILLING_CYCLES.MONTHLY, today)).toBe('2026-09-15');
+    expect(calculateNextRenewalDate('2026-12-10', BILLING_CYCLES.MONTHLY, today)).toBe('2027-01-10');
+  });
+
+  it('adjusts month-end dates correctly for February and shorter months', () => {
+    // 31 de janeiro em ano comum -> 28 de fevereiro
+    expect(calculateNextRenewalDate('2026-01-31', BILLING_CYCLES.MONTHLY, '2026-01-31')).toBe('2026-02-28');
+    // 31 de janeiro em ano bissexto -> 29 de fevereiro
+    expect(calculateNextRenewalDate('2024-01-31', BILLING_CYCLES.MONTHLY, '2024-01-31')).toBe('2024-02-29');
+    // 31 de março -> 30 de abril
+    expect(calculateNextRenewalDate('2026-03-31', BILLING_CYCLES.MONTHLY, '2026-03-31')).toBe('2026-04-30');
+    // Preserva dia 31 após fevereiro
+    expect(calculateNextRenewalDate('2026-01-31', BILLING_CYCLES.MONTHLY, '2026-02-28')).toBe('2026-03-31');
+  });
+
+  it('catches up overdue renewals to the next future cycle', () => {
+    const today = '2026-08-15';
+
+    // 3 meses em atraso (maio -> setembro)
+    expect(calculateNextRenewalDate('2026-05-15', BILLING_CYCLES.MONTHLY, today)).toBe('2026-09-15');
+
+    // Assinatura anual com 2 anos em atraso
+    expect(calculateNextRenewalDate('2024-03-10', BILLING_CYCLES.YEARLY, today)).toBe('2027-03-10');
+  });
+
+  it('handles yearly renewals and leap year preservation', () => {
+    // 29 de fevereiro em ano bissexto para ano comum
+    expect(calculateNextRenewalDate('2024-02-29', BILLING_CYCLES.YEARLY, '2024-02-29')).toBe('2025-02-28');
+    // Ano regular
+    expect(calculateNextRenewalDate('2026-06-01', BILLING_CYCLES.YEARLY, '2026-06-01')).toBe('2027-06-01');
+  });
+
+  it('returns original base date for non-recurring cycles or invalid inputs', () => {
+    expect(calculateNextRenewalDate('2026-08-15', BILLING_CYCLES.LIFETIME, '2026-08-15')).toBe('2026-08-15');
+    expect(calculateNextRenewalDate('2026-08-15', BILLING_CYCLES.NONE, '2026-08-15')).toBe('2026-08-15');
+    expect(calculateNextRenewalDate('invalid-date', BILLING_CYCLES.MONTHLY, '2026-08-15')).toBeNull();
   });
 });
 

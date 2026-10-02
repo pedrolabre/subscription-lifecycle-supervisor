@@ -69,6 +69,10 @@ export function createFreeformService(name, options = {}) {
     iconPath: normalizeServiceIconPath(options.iconPath),
     aliases: Object.freeze([]),
     defaultBillingCycle: normalizeDefaultBillingCycle(options.defaultBillingCycle),
+    cancellationUrl:
+      typeof options.cancellationUrl === 'string' && options.cancellationUrl.trim()
+        ? options.cancellationUrl.trim()
+        : null,
     isCustom: true,
   });
 }

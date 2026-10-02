@@ -154,6 +154,22 @@ test('opens and interacts with backup dialog', async ({ page }) => {
   await expect(backupDialog).toBeHidden();
 });
 
+test('covers 1-click renewal and safe cancellation url link', async ({ page }) => {
+  await page.goto('/');
+
+  await createPaidSubscription(page);
+
+  await expect(page.locator('[data-test="renew-subscription"]')).toBeVisible();
+  const cancellationLink = page.locator('[data-test="cancellation-link"]');
+  await expect(cancellationLink).toBeVisible();
+  await expect(cancellationLink).toHaveAttribute('target', '_blank');
+  await expect(cancellationLink).toHaveAttribute('rel', 'noopener noreferrer');
+
+  await page.locator('[data-test="renew-subscription"]').click();
+  await expect(page.locator('[role="status"]')).toContainText('renovado');
+  await expect(page.locator('.subscription-card__date-value')).toHaveText('09/10/2026');
+});
+
 async function createPaidSubscription(page) {
   await page.getByRole('button', { name: 'Nova assinatura' }).click();
   await page.locator('[data-test="service-catalog-select"]').selectOption('spotify');

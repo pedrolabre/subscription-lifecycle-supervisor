@@ -1,5 +1,8 @@
 import { computed, ref } from 'vue';
-import { SUBSCRIPTION_STATUS } from '../domain/subscriptions/index.js';
+import {
+  SUBSCRIPTION_STATUS,
+  SUBSCRIPTION_TYPES,
+} from '../domain/subscriptions/index.js';
 import {
   createLocalMutationError,
   normalizeMutationError,
@@ -84,6 +87,36 @@ export function useSubscriptionWorkflow({ subscriptionsStore, t }) {
 
     editingSubscription.value =
       resolvePersistedSubscription(subscriptionId) ?? subscription;
+    isSubscriptionFormOpen.value = true;
+    clearSubscriptionFormError();
+    clearSubscriptionActionError();
+  }
+
+  function openConvertTrialForm(subscription) {
+    const subscriptionId = resolveSubscriptionId(subscription);
+
+    if (!subscriptionId) {
+      subscriptionActionError.value = createLocalMutationError(
+        t('errors.missingSubscriptionIdForEdit'),
+      );
+      return;
+    }
+
+    const persisted =
+      resolvePersistedSubscription(subscriptionId) ?? subscription;
+
+    editingSubscription.value = {
+      ...persisted,
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      type: SUBSCRIPTION_TYPES.PAID,
+      billingCycle:
+        persisted.billingCycle && persisted.billingCycle !== 'none'
+          ? persisted.billingCycle
+          : 'monthly',
+      price: persisted.price || '',
+      renewalDate: persisted.renewalDate || '',
+      trialEndDate: '',
+    };
     isSubscriptionFormOpen.value = true;
     clearSubscriptionFormError();
     clearSubscriptionActionError();
@@ -277,6 +310,46 @@ export function useSubscriptionWorkflow({ subscriptionsStore, t }) {
     await runLifecycleMutation(subscription, 'end', t('errors.endSubscription'));
   }
 
+  async function renewSubscription(subscription) {
+    if (isRunningLifecycleAction.value) {
+      return;
+    }
+
+    const subscriptionId = resolveSubscriptionId(subscription);
+
+    if (!subscriptionId) {
+      subscriptionActionError.value = createLocalMutationError(
+        t('errors.missingSubscriptionId'),
+      );
+      return;
+    }
+
+    const name =
+      normalizeSubscriptionName(subscription) || t('card.fallbackName');
+
+    isRunningLifecycleAction.value = true;
+    clearSubscriptionActionError();
+    clearSubscriptionFormError();
+
+    try {
+      await subscriptionsStore.renewSubscription(subscriptionId);
+
+      toastState.value = {
+        visible: true,
+        message: t('toast.renewed', { name }),
+        actionLabel: '',
+        subscriptionId: null,
+        previousStatus: null,
+      };
+    } catch (cause) {
+      subscriptionActionError.value =
+        subscriptionsStore.mutationError ??
+        normalizeMutationError(cause, t('errors.renewSubscription'));
+    } finally {
+      isRunningLifecycleAction.value = false;
+    }
+  }
+
   async function runLifecycleMutation(subscription, action, fallbackMessage) {
     if (isRunningLifecycleAction.value) {
       return;
@@ -331,8 +404,10 @@ export function useSubscriptionWorkflow({ subscriptionsStore, t }) {
     handleUndoToastAction,
     isSubmittingSubscription,
     isSubscriptionFormOpen,
+    openConvertTrialForm,
     openEditSubscriptionForm,
     openSubscriptionForm,
+    renewSubscription,
     requestArchiveSubscription,
     requestEndSubscription,
     submitSubscription,

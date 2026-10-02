@@ -88,6 +88,7 @@ describe('service catalog domain', () => {
       iconPath: SERVICE_BRAND_FALLBACK.iconPath,
       aliases: [],
       defaultBillingCycle: BILLING_CYCLES.NONE,
+      cancellationUrl: null,
       isCustom: true,
     });
     expect(Object.isFrozen(service)).toBe(true);

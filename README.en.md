@@ -191,6 +191,7 @@ subscription-lifecycle-supervisor/
       subscription-form/
     infrastructure/
       db/
+      history/
       pwa/
       subscriptions/
     shared/

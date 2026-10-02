@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import {
+  calculateNextCycle,
+  createTrialConversionPayload,
   SUBSCRIPTION_STATUS,
   summarizeSubscriptions,
 } from '../../domain/subscriptions/index.js';
@@ -9,6 +11,7 @@ import {
   generateSubscriptionsCsv,
   validateBackupPayload,
 } from '../../domain/backup/index.js';
+import { historyRepository as defaultHistoryRepository } from '../../infrastructure/history/index.js';
 import { subscriptionsRepository } from '../../infrastructure/subscriptions/index.js';
 
 export const SUBSCRIPTIONS_STORE_ID = 'subscriptions';
@@ -28,6 +31,7 @@ export const SUBSCRIPTIONS_STORE_STATUS = Object.freeze({
 export function createSubscriptionsStore(options = {}) {
   const storeId = options.storeId ?? SUBSCRIPTIONS_STORE_ID;
   const repository = options.repository ?? subscriptionsRepository;
+  const historyRepo = options.historyRepository ?? defaultHistoryRepository;
   const summaryOptions = options.summaryOptions;
 
   return defineStore(storeId, () => {
@@ -142,6 +146,65 @@ export function createSubscriptionsStore(options = {}) {
       });
     }
 
+    async function renewSubscription(id, renewOptions = {}) {
+      return runMutation(async () => {
+        const subscription = subscriptions.value.find((item) => item.id === id);
+
+        if (!subscription) {
+          const error = new Error('Assinatura nao encontrada para renovacao.');
+          error.code = 'subscription_not_found';
+          throw error;
+        }
+
+        const refDate = renewOptions.referenceDate ?? summaryReferenceDate.value;
+        const { nextRenewalDate, historyRecord } = calculateNextCycle(
+          subscription,
+          refDate,
+        );
+
+        const updated = await repository.update(id, {
+          renewalDate: nextRenewalDate,
+        });
+
+        try {
+          await historyRepo.add(historyRecord);
+        } catch {
+          // Auditoria de histórico não interrompe a renovação local
+        }
+
+        upsertSubscription(updated);
+
+        return updated;
+      });
+    }
+
+    async function convertTrialToPaid(id, payload = {}) {
+      return runMutation(async () => {
+        const subscription = subscriptions.value.find((item) => item.id === id);
+
+        if (!subscription) {
+          const error = new Error('Assinatura de trial nao encontrada para conversao.');
+          error.code = 'subscription_not_found';
+          throw error;
+        }
+
+        const conversionPayload = createTrialConversionPayload(subscription, {
+          ...payload,
+          referenceDate: payload.referenceDate ?? summaryReferenceDate.value,
+        });
+
+        const updated = await repository.update(id, conversionPayload);
+
+        upsertSubscription(updated);
+
+        return updated;
+      });
+    }
+
+    async function getBillingHistory(subscriptionId) {
+      return historyRepo.listBySubscriptionId(subscriptionId);
+    }
+
     function exportBackup(settings = {}) {
       return createBackupPayload(subscriptions.value, settings);
     }
@@ -247,6 +310,9 @@ export function createSubscriptionsStore(options = {}) {
       update,
       archive,
       end,
+      renewSubscription,
+      convertTrialToPaid,
+      getBillingHistory,
       exportBackup,
       exportCsv,
       importBackup,

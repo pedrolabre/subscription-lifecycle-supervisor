@@ -4,6 +4,12 @@ import { formatCurrency } from '../../core/money/index.js';
 import { SERVICE_BRAND_FALLBACK, findService } from '../../domain/services/index.js';
 import {
   BILLING_CYCLES,
+  canConvertTrial as checkCanConvertTrial,
+  canRenewSubscription,
+  evaluateTemporalStatus,
+  isRenewalDueToday as checkIsRenewalDueToday,
+  isRenewalOverdue as checkIsRenewalOverdue,
+  isTrialExpired as checkIsTrialExpired,
   SUBSCRIPTION_STATUS,
   SUBSCRIPTION_TYPES,
 } from '../../domain/subscriptions/index.js';
@@ -53,17 +59,42 @@ export function useSubscriptionCardViewModel({
     ),
   );
 
-  const statusLabel = computed(
-    () =>
+  const isTrialExpired = computed(() =>
+    checkIsTrialExpired(props.subscription, props.referenceDate),
+  );
+
+  const isRenewalOverdue = computed(() =>
+    checkIsRenewalOverdue(props.subscription, props.referenceDate),
+  );
+
+  const isRenewalDueToday = computed(() =>
+    checkIsRenewalDueToday(props.subscription, props.referenceDate),
+  );
+
+  const temporalStatus = computed(() =>
+    evaluateTemporalStatus(props.subscription, props.referenceDate),
+  );
+
+  const statusLabel = computed(() => {
+    if (isTrialExpired.value) {
+      return t('card.trialExpired');
+    }
+
+    return (
       (statusMessageKeys[props.subscription.status]
         ? t(statusMessageKeys[props.subscription.status])
         : null) ??
-      normalizeText(props.subscription.status, t('card.fallbackStatus')),
-  );
+      normalizeText(props.subscription.status, t('card.fallbackStatus'))
+    );
+  });
 
-  const statusTone = computed(
-    () => statusTones[props.subscription.status] ?? 'info',
-  );
+  const statusTone = computed(() => {
+    if (isTrialExpired.value) {
+      return 'ended';
+    }
+
+    return statusTones[props.subscription.status] ?? 'info';
+  });
 
   const brandColor = computed(() =>
     normalizeBrandColor(
@@ -250,6 +281,24 @@ export function useSubscriptionCardViewModel({
 
   const canArchive = computed(() => hasSubscriptionId.value);
 
+  const canRenew = computed(
+    () =>
+      hasSubscriptionId.value &&
+      canRenewSubscription(props.subscription),
+  );
+
+  const canConvertTrial = computed(
+    () =>
+      hasSubscriptionId.value &&
+      checkCanConvertTrial(props.subscription),
+  );
+
+  const cancellationUrl = computed(() =>
+    props.subscription.cancellationUrl ||
+    matchedCatalogService.value?.cancellationUrl ||
+    null,
+  );
+
   const canEnd = computed(
     () =>
       hasSubscriptionId.value &&
@@ -260,6 +309,16 @@ export function useSubscriptionCardViewModel({
     hasSubscriptionId.value
       ? t('card.actionEdit', { name: displayName.value })
       : t('card.actionEditUnavailable', { name: displayName.value }),
+  );
+
+  const renewActionLabel = computed(() =>
+    canRenew.value
+      ? t('card.actionRenew', { name: displayName.value })
+      : t('card.actionRenewUnavailable', { name: displayName.value }),
+  );
+
+  const convertTrialActionLabel = computed(() =>
+    t('card.actionConvertTrial', { name: displayName.value }),
   );
 
   const archiveButtonText = computed(() =>
@@ -305,8 +364,11 @@ export function useSubscriptionCardViewModel({
     archiveButtonText,
     brandInitial,
     canArchive,
+    canConvertTrial,
     canEnd,
+    canRenew,
     canShowLogo,
+    cancellationUrl,
     cardDateId,
     cardDescriptionIds,
     cardPriceId,
@@ -314,19 +376,25 @@ export function useSubscriptionCardViewModel({
     cardStyle,
     cardTitleId,
     cardWarningId,
+    convertTrialActionLabel,
     displayName,
     editActionLabel,
     endActionLabel,
     handleLogoError,
     hasSubscriptionId,
+    isRenewalDueToday,
+    isRenewalOverdue,
+    isTrialExpired,
     isTrialWarning,
     logoUrl,
     priceCycle,
     priceValue,
     relativeLabelText,
     relevantDate,
+    renewActionLabel,
     statusLabel,
     statusTone,
+    temporalStatus,
   };
 }
 

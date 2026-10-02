@@ -36,6 +36,86 @@ export function calculateDaysRemaining(targetDate, referenceDate = new Date()) {
   return Math.round((targetTimestamp - referenceTimestamp) / DAY_IN_MS);
 }
 
+export function isDateOverdue(targetDate, referenceDate = new Date()) {
+  const remaining = calculateDaysRemaining(targetDate, referenceDate);
+
+  return remaining !== null && remaining < 0;
+}
+
+export function isDateDueToday(targetDate, referenceDate = new Date()) {
+  const remaining = calculateDaysRemaining(targetDate, referenceDate);
+
+  return remaining === 0;
+}
+
+export function calculateNextRenewalDate(
+  baseDate,
+  billingCycle,
+  referenceDate = new Date(),
+  options = {},
+) {
+  const baseIso =
+    typeof baseDate === 'string' && isIsoDate(baseDate)
+      ? baseDate
+      : baseDate instanceof Date && !Number.isNaN(baseDate.getTime())
+        ? getIsoDateFromReference(baseDate)
+        : null;
+
+  if (!baseIso) {
+    return null;
+  }
+
+  if (billingCycle !== 'monthly' && billingCycle !== 'yearly') {
+    return baseIso;
+  }
+
+  const [baseYear, baseMonth, baseDay] = baseIso.split('-').map(Number);
+  const targetDay = baseDay;
+
+  let currentYear = baseYear;
+  let currentMonth = baseMonth;
+  let currentDay = baseDay;
+
+  function advanceOneCycle() {
+    if (billingCycle === 'yearly') {
+      currentYear += 1;
+    } else {
+      currentMonth += 1;
+      if (currentMonth > 12) {
+        currentMonth = 1;
+        currentYear += 1;
+      }
+    }
+
+    const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+    currentDay = Math.min(targetDay, daysInMonth);
+  }
+
+  advanceOneCycle();
+  let currentIso = formatIsoDate(currentYear, currentMonth, currentDay);
+
+  const shouldCatchUp =
+    options.catchUp !== false &&
+    referenceDate !== null &&
+    referenceDate !== undefined;
+
+  if (shouldCatchUp) {
+    const refIso = getIsoDateFromReference(referenceDate);
+
+    if (refIso) {
+      let safetyCounter = 0;
+
+      while (currentIso <= refIso && safetyCounter < 1200) {
+        advanceOneCycle();
+        currentIso = formatIsoDate(currentYear, currentMonth, currentDay);
+        safetyCounter += 1;
+      }
+    }
+  }
+
+  return currentIso;
+}
+
 export function isTrialEndingSoon(subscription, options = {}) {
   if (!isRecord(subscription) || subscription.status !== SUBSCRIPTION_STATUS.TRIAL) {
     return false;
@@ -98,4 +178,32 @@ function normalizeWindowDays(value) {
 
 function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function getDaysInMonth(year, month) {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+function formatIsoDate(year, month, day) {
+  return [
+    String(year).padStart(4, '0'),
+    padDatePart(month),
+    padDatePart(day),
+  ].join('-');
+}
+
+function getIsoDateFromReference(value) {
+  if (typeof value === 'string') {
+    return isIsoDate(value) ? value : null;
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return [
+      value.getFullYear(),
+      padDatePart(value.getMonth() + 1),
+      padDatePart(value.getDate()),
+    ].join('-');
+  }
+
+  return null;
 }

@@ -205,6 +205,7 @@ function createServiceMetadataPayload(service) {
   return {
     brandColor: service.color ?? null,
     category: service.category ?? null,
+    cancellationUrl: service.cancellationUrl ?? null,
     icon: service.iconPath ?? null,
     serviceId: service.id ?? null,
   };
@@ -225,6 +226,7 @@ function createPreservedFreeformOptions({
   }
 
   return {
+    cancellationUrl: subscription?.cancellationUrl,
     category: subscription?.category,
     color: subscription?.brandColor,
     iconPath: subscription?.icon,

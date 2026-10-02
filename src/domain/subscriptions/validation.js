@@ -32,6 +32,7 @@ export function validateSubscriptionPayload(payload) {
   validatePrice(normalized, errors);
   validateDates(normalized, errors);
   validateBrandColor(normalized, errors);
+  validateCancellationUrl(normalized, errors);
 
   return {
     isValid: errors.length === 0,
@@ -195,6 +196,46 @@ function validateBrandColor(subscription, errors) {
       'brandColor',
       SUBSCRIPTION_ERROR_CODES.BRAND_COLOR_INVALID,
     );
+  }
+}
+
+function validateCancellationUrl(subscription, errors) {
+  if (!subscription.cancellationUrl) {
+    return;
+  }
+
+  if (
+    subscription.cancellationUrl.length >
+    SUBSCRIPTION_FIELD_LIMITS.cancellationUrlMaxLength
+  ) {
+    addError(
+      errors,
+      'cancellationUrl',
+      SUBSCRIPTION_ERROR_CODES.CANCELLATION_URL_TOO_LONG,
+    );
+    return;
+  }
+
+  if (!isValidWebUrl(subscription.cancellationUrl)) {
+    addError(
+      errors,
+      'cancellationUrl',
+      SUBSCRIPTION_ERROR_CODES.CANCELLATION_URL_INVALID,
+    );
+  }
+}
+
+function isValidWebUrl(value) {
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  try {
+    const url = new URL(value);
+
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
   }
 }
 

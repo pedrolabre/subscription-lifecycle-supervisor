@@ -10,6 +10,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/spotify/1DB954',
     aliases: ['spotify premium', 'spotify individual'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://www.spotify.com/account/overview/',
   },
   {
     id: 'netflix',
@@ -19,6 +20,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/netflix/E50914',
     aliases: ['netflix standard', 'netflix premium'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://www.netflix.com/youraccount',
   },
   {
     id: 'amazon-prime',
@@ -28,6 +30,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/primevideo/00A8E1',
     aliases: ['prime video', 'prime', 'amazon prime video'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://www.amazon.com/mc/manage',
   },
   {
     id: 'disney-plus',
@@ -37,6 +40,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/disneyplus/113CCF',
     aliases: ['disney plus', 'star plus', 'disney premium'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://www.disneyplus.com/account',
   },
   {
     id: 'youtube-premium',
@@ -46,6 +50,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/youtube/FF0033',
     aliases: ['youtube music', 'youtube sem anuncios', 'yt premium'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://www.youtube.com/paid_memberships',
   },
   {
     id: 'apple-one',
@@ -55,6 +60,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/apple/6E6E73',
     aliases: ['apple services', 'apple subscription'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://support.apple.com/billing',
   },
   {
     id: 'icloud-plus',
@@ -64,6 +70,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/icloud/147EFB',
     aliases: ['icloud', 'icloud plus', 'apple icloud'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://support.apple.com/billing',
   },
   {
     id: 'google-one',
@@ -73,6 +80,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/google/4285F4',
     aliases: ['google storage', 'google drive storage', 'google cloud storage'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://one.google.com/settings',
   },
   {
     id: 'github-pro',
@@ -82,6 +90,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/github/24292F',
     aliases: ['github', 'github student', 'github copilot'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://github.com/settings/billing',
   },
   {
     id: 'figma',
@@ -91,6 +100,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/figma/F24E1E',
     aliases: ['figma professional', 'figma design'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://www.figma.com/settings',
   },
   {
     id: 'notion',
@@ -100,6 +110,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/notion/191919',
     aliases: ['notion plus', 'notion ai'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://www.notion.so/settings',
   },
   {
     id: 'canva',
@@ -109,6 +120,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/canva/00C4CC',
     aliases: ['canva pro', 'canva teams'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://www.canva.com/settings/billing',
   },
   {
     id: 'chatgpt',
@@ -125,6 +137,7 @@ const catalogItems = [
       'gpt 4o',
     ],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://chatgpt.com/#settings',
   },
   {
     id: 'claude',
@@ -141,6 +154,7 @@ const catalogItems = [
       'claude sonnet',
     ],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://claude.ai/settings/billing',
   },
   {
     id: 'perplexity',
@@ -151,6 +165,7 @@ const catalogItems = [
       'https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/perplexity.svg',
     aliases: ['perplexity pro', 'perplexity ai', 'pplx'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://www.perplexity.ai/settings',
   },
   {
     id: 'midjourney',
@@ -160,6 +175,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/midjourney/2563EB',
     aliases: ['midjourney pro', 'midjourney basic', 'midjourney standard'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://www.midjourney.com/account',
   },
   {
     id: 'github-copilot',
@@ -174,6 +190,7 @@ const catalogItems = [
       'github copilot business',
     ],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://github.com/settings/billing',
   },
   {
     id: 'cursor',
@@ -183,6 +200,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/cursor/000000',
     aliases: ['cursor pro', 'cursor ai', 'anysphere'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://www.cursor.com/settings',
   },
   {
     id: 'jetbrains',
@@ -200,6 +218,7 @@ const catalogItems = [
       'rider',
     ],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://account.jetbrains.com/licenses',
   },
   {
     id: 'vercel',
@@ -210,6 +229,7 @@ const catalogItems = [
       'https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/vercel.svg',
     aliases: ['vercel pro', 'vercel team'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://vercel.com/dashboard',
   },
   {
     id: 'adobe-creative-cloud',
@@ -220,6 +240,7 @@ const catalogItems = [
       'https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/adobecreativecloud.svg',
     aliases: ['adobe', 'photoshop', 'illustrator', 'premiere', 'lightroom'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://account.adobe.com/plans',
   },
   {
     id: 'duolingo',
@@ -230,6 +251,7 @@ const catalogItems = [
       'https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/duolingo.svg',
     aliases: ['super duolingo', 'duolingo max', 'duolingo plus'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://www.duolingo.com/settings/account',
   },
   {
     id: 'xbox-game-pass',
@@ -239,6 +261,7 @@ const catalogItems = [
     iconPath: 'https://cdn.simpleicons.org/xbox/107C41',
     aliases: ['game pass', 'pc game pass', 'xbox ultimate'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://account.microsoft.com/services',
   },
   {
     id: 'playstation-plus',
@@ -249,6 +272,7 @@ const catalogItems = [
       'https://cdn.jsdelivr.net/npm/simple-icons@v13/icons/playstation.svg',
     aliases: ['ps plus', 'psn', 'playstation plus essential', 'ps plus extra'],
     defaultBillingCycle: BILLING_CYCLES.MONTHLY,
+    cancellationUrl: 'https://store.playstation.com/',
   },
 ];
 

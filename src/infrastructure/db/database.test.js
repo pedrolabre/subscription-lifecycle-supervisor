@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CURRENT_DATABASE_VERSION,
   createDefaultSettings,
   createSubscriptionLifecycleDatabase,
   DATABASE_NAME,
   DATABASE_SCHEMA,
+  DATABASE_SCHEMA_V2,
   DB_STORES,
   INITIAL_DATABASE_VERSION,
   seedDefaultSettings,
@@ -11,14 +13,22 @@ import {
 } from './index.js';
 
 describe('database schema', () => {
-  it('declares the initial IndexedDB stores', () => {
+  it('declares the initial and v2 IndexedDB stores', () => {
     expect(DATABASE_NAME).toBe('SubscriptionLifecycleSupervisorDB');
     expect(INITIAL_DATABASE_VERSION).toBe(1);
+    expect(CURRENT_DATABASE_VERSION).toBe(2);
     expect(DATABASE_SCHEMA).toEqual({
       subscriptions:
         'id, serviceName, serviceId, status, type, renewalDate, trialEndDate, updatedAt',
       servicesCatalog: 'id, name, category',
       settings: 'key',
+    });
+    expect(DATABASE_SCHEMA_V2).toEqual({
+      subscriptions:
+        'id, serviceName, serviceId, status, type, renewalDate, trialEndDate, updatedAt',
+      servicesCatalog: 'id, name, category',
+      settings: 'key',
+      billingHistory: '++id, subscriptionId, paidAt, billingCycle, amountCents',
     });
   });
 
@@ -28,8 +38,9 @@ describe('database schema', () => {
     });
 
     expect(db.name).toBe('SubscriptionLifecycleSupervisorTestDB');
-    expect(db.verno).toBe(INITIAL_DATABASE_VERSION);
+    expect(db.verno).toBe(CURRENT_DATABASE_VERSION);
     expect(db.tables.map((table) => table.name).sort()).toEqual([
+      DB_STORES.BILLING_HISTORY,
       DB_STORES.SERVICES_CATALOG,
       DB_STORES.SETTINGS,
       DB_STORES.SUBSCRIPTIONS,
@@ -53,6 +64,10 @@ describe('database schema', () => {
     expect(readTableSchema(db, DB_STORES.SETTINGS)).toEqual({
       primaryKey: 'key',
       indexes: [],
+    });
+    expect(readTableSchema(db, DB_STORES.BILLING_HISTORY)).toEqual({
+      primaryKey: '++id',
+      indexes: ['subscriptionId', 'paidAt', 'billingCycle', 'amountCents'],
     });
 
     db.close();

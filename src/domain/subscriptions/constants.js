@@ -39,8 +39,19 @@ export const RECURRING_BILLING_CYCLE_VALUES = Object.freeze([
   BILLING_CYCLES.YEARLY,
 ]);
 
+export const TEMPORAL_STATUS = Object.freeze({
+  RENEWAL_DUE_TODAY: 'renewal_due_today',
+  RENEWAL_OVERDUE: 'renewal_overdue',
+  TRIAL_EXPIRED: 'trial_expired',
+});
+
+export const TEMPORAL_STATUS_VALUES = Object.freeze(
+  Object.values(TEMPORAL_STATUS),
+);
+
 export const SUBSCRIPTION_FIELD_LIMITS = Object.freeze({
   serviceNameMaxLength: 40,
+  cancellationUrlMaxLength: 500,
 });
 
 export const SUBSCRIPTION_ERROR_CODES = Object.freeze({
@@ -63,6 +74,8 @@ export const SUBSCRIPTION_ERROR_CODES = Object.freeze({
   TRIAL_END_DATE_INVALID: 'trial_end_date_invalid',
   EDUCATIONAL_END_DATE_REQUIRED: 'educational_end_date_required',
   BRAND_COLOR_INVALID: 'brand_color_invalid',
+  CANCELLATION_URL_INVALID: 'cancellation_url_invalid',
+  CANCELLATION_URL_TOO_LONG: 'cancellation_url_too_long',
 });
 
 export const SUBSCRIPTION_ERROR_MESSAGES = Object.freeze({
@@ -103,5 +116,9 @@ export const SUBSCRIPTION_ERROR_MESSAGES = Object.freeze({
     'Informe a data de termino do acesso educacional.',
   [SUBSCRIPTION_ERROR_CODES.BRAND_COLOR_INVALID]:
     'A cor da marca deve ser hexadecimal.',
+  [SUBSCRIPTION_ERROR_CODES.CANCELLATION_URL_INVALID]:
+    'A URL de cancelamento deve ser um endereco web valido.',
+  [SUBSCRIPTION_ERROR_CODES.CANCELLATION_URL_TOO_LONG]:
+    'A URL de cancelamento deve ter no maximo 500 caracteres.',
 });
 

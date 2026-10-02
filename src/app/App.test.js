@@ -781,6 +781,73 @@ describe('App', () => {
       status: 'active',
     });
   });
+
+  it('renews an active subscription with one click and triggers store.renewSubscription', async () => {
+    const initial = createSubscription({
+      id: 'sub_netflix',
+      serviceName: 'Netflix',
+      renewalDate: '2026-09-01',
+      status: 'active',
+      type: 'paid',
+    });
+    const store = createStore({
+      isLoaded: true,
+      status: storeStatus.LOADED,
+      subscriptions: [initial],
+      summary: {
+        items: [initial],
+      },
+    });
+    store.renewSubscription = vi.fn().mockResolvedValue(initial);
+    const wrapper = mountApp(store);
+
+    const renewButton = wrapper.get('[data-test="renew-subscription"]');
+    expect(renewButton.exists()).toBe(true);
+    await renewButton.trigger('click');
+    await flushPromises();
+
+    expect(store.renewSubscription).toHaveBeenCalledWith('sub_netflix');
+    expect(wrapper.find('[role="status"]').text()).toContain(
+      'Ciclo de "Netflix" renovado',
+    );
+  });
+
+  it('opens conversion form when clicking make paid on an expired trial assistant', async () => {
+    const expiredTrial = createSubscription({
+      id: 'sub_prime',
+      serviceName: 'Prime Video',
+      status: 'trial',
+      type: 'trial',
+      trialEndDate: '2026-08-01',
+      renewalDate: '2026-08-01',
+    });
+    const store = createStore({
+      isLoaded: true,
+      status: storeStatus.LOADED,
+      subscriptions: [expiredTrial],
+      summary: {
+        items: [expiredTrial],
+      },
+    });
+    const wrapper = mountApp(store);
+
+    const convertButton = wrapper.get(
+      '[data-test="convert-trial-subscription"]',
+    );
+    expect(convertButton.exists()).toBe(true);
+    expect(convertButton.text()).toBe('Tornar Paga');
+
+    await convertButton.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(true);
+    expect(wrapper.get('#new-subscription-title').text()).toBe(
+      'Editar assinatura',
+    );
+    expect(wrapper.get('[data-test="service-name"]').element.value).toBe(
+      'Prime Video',
+    );
+  });
 });
 
 function mountApp(store, options = {}) {
@@ -796,9 +863,11 @@ function createStore(overrides = {}) {
     activeCount: 0,
     archivedCount: 0,
     archive: vi.fn().mockResolvedValue(null),
+    convertTrialToPaid: vi.fn().mockResolvedValue(null),
     endedCount: 0,
     end: vi.fn().mockResolvedValue(null),
     create: vi.fn().mockResolvedValue(null),
+    getBillingHistory: vi.fn().mockResolvedValue([]),
     hasError: false,
     hasSubscriptions: false,
     isEmpty: false,
@@ -809,6 +878,7 @@ function createStore(overrides = {}) {
     monthlyTotal: 0,
     mutationError: null,
     reload: vi.fn().mockResolvedValue([]),
+    renewSubscription: vi.fn().mockResolvedValue(null),
     status: storeStatus.IDLE,
     subscriptions: [],
     summary: {

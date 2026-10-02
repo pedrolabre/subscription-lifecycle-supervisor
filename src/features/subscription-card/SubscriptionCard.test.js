@@ -176,6 +176,69 @@ describe('SubscriptionCard', () => {
       ),
     ).toBeDefined();
   });
+
+  it('renders 1-click renew button and emits renew event for active recurring subscriptions', async () => {
+    const wrapper = mountCard({
+      id: 'sub_netflix',
+      serviceName: 'Netflix',
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      billingCycle: BILLING_CYCLES.MONTHLY,
+      renewalDate: '2026-08-15',
+    });
+
+    const renewBtn = wrapper.get('[data-test="renew-subscription"]');
+    expect(renewBtn.text()).toBe('Renovar');
+    expect(renewBtn.attributes('aria-label')).toBe('Renovar ciclo de Netflix');
+
+    await renewBtn.trigger('click');
+    expect(wrapper.emitted('renew')?.[0]?.[0]).toMatchObject({
+      id: 'sub_netflix',
+      serviceName: 'Netflix',
+    });
+  });
+
+  it('renders guided assistant for expired trials and emits convert-trial action', async () => {
+    const wrapper = mountCard({
+      id: 'sub_trial_expired',
+      serviceName: 'Figma Pro Trial',
+      status: SUBSCRIPTION_STATUS.TRIAL,
+      trialEndDate: '2026-08-01', // referenceDate is 2026-08-03, so it is expired
+      type: SUBSCRIPTION_TYPES.FREE,
+      billingCycle: BILLING_CYCLES.NONE,
+    });
+
+    expect(wrapper.classes()).toContain('subscription-card--trial-expired');
+    expect(wrapper.get('[data-test="trial-assistant"]')).toBeDefined();
+    expect(wrapper.text()).toContain('Trial vencido');
+    expect(wrapper.text()).toContain('Decisao necessaria');
+
+    const convertBtn = wrapper.get('[data-test="convert-trial-subscription"]');
+    expect(convertBtn.text()).toBe('Tornar Paga');
+    await convertBtn.trigger('click');
+    expect(wrapper.emitted('convert-trial')?.[0]?.[0]).toMatchObject({
+      id: 'sub_trial_expired',
+    });
+
+    const endBtn = wrapper.get('[data-test="end-trial-subscription"]');
+    expect(endBtn.text()).toBe('Encerrar');
+    await endBtn.trigger('click');
+    expect(wrapper.emitted('end')?.[0]?.[0]).toMatchObject({
+      id: 'sub_trial_expired',
+    });
+  });
+
+  it('renders safe cancellation link with target _blank and noopener noreferrer', () => {
+    const wrapper = mountCard({
+      cancellationUrl: 'https://www.spotify.com/account/overview/',
+      serviceName: 'Spotify',
+    });
+
+    const link = wrapper.get('[data-test="cancellation-link"]');
+    expect(link.attributes('href')).toBe('https://www.spotify.com/account/overview/');
+    expect(link.attributes('target')).toBe('_blank');
+    expect(link.attributes('rel')).toBe('noopener noreferrer');
+    expect(link.text()).toContain('Link de cancelamento');
+  });
 });
 
 function mountCard(overrides = {}, props = {}) {

@@ -585,12 +585,95 @@ describe('subscriptions store', () => {
     expect(store.hasError).toBe(true);
     expect(store.mutationError.code).toBe('invalid_backup_schema');
   });
+
+  it('renews an active monthly subscription and records audit history', async () => {
+    const historyAdd = vi.fn().mockResolvedValue(1);
+    const initialSub = subscription({
+      id: 'sub_netflix',
+      serviceName: 'Netflix',
+      status: SUBSCRIPTION_STATUS.ACTIVE,
+      billingCycle: BILLING_CYCLES.MONTHLY,
+      price: 39.9,
+      renewalDate: '2026-08-15',
+    });
+
+    const useStore = createTestStore({
+      repository: {
+        list: vi.fn().mockResolvedValue([initialSub]),
+        update: vi.fn((id, changes) =>
+          Promise.resolve({ ...initialSub, ...changes }),
+        ),
+      },
+      historyRepository: {
+        add: historyAdd,
+        listBySubscriptionId: vi.fn().mockResolvedValue([]),
+      },
+    });
+
+    const store = useStore();
+    await store.load();
+
+    const result = await store.renewSubscription('sub_netflix', {
+      referenceDate: '2026-08-15',
+    });
+
+    expect(result.renewalDate).toBe('2026-09-15');
+    expect(store.subscriptions[0].renewalDate).toBe('2026-09-15');
+    expect(historyAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subscriptionId: 'sub_netflix',
+        billingCycle: 'monthly',
+        amountCents: 3990,
+      }),
+    );
+  });
+
+  it('converts an existing trial subscription to active paid', async () => {
+    const trialSub = subscription({
+      id: 'sub_trial_app',
+      serviceName: 'Copilot',
+      status: SUBSCRIPTION_STATUS.TRIAL,
+      type: SUBSCRIPTION_TYPES.FREE,
+      billingCycle: BILLING_CYCLES.NONE,
+      price: 0,
+      trialEndDate: '2026-08-10',
+    });
+
+    const useStore = createTestStore({
+      repository: {
+        list: vi.fn().mockResolvedValue([trialSub]),
+        update: vi.fn((id, changes) =>
+          Promise.resolve({ ...trialSub, ...changes }),
+        ),
+      },
+    });
+
+    const store = useStore();
+    await store.load();
+
+    const result = await store.convertTrialToPaid('sub_trial_app', {
+      price: 50,
+      billingCycle: BILLING_CYCLES.MONTHLY,
+      renewalDate: '2026-09-10',
+    });
+
+    expect(result.status).toBe(SUBSCRIPTION_STATUS.ACTIVE);
+    expect(result.type).toBe(SUBSCRIPTION_TYPES.PAID);
+    expect(result.price).toBe(50);
+    expect(result.trialEndDate).toBeNull();
+    expect(result.renewalDate).toBe('2026-09-10');
+    expect(store.subscriptions[0].status).toBe(SUBSCRIPTION_STATUS.ACTIVE);
+  });
 });
 
 function createTestStore(options = {}) {
   return createSubscriptionsStore({
     storeId: `subscriptions-test-${crypto.randomUUID()}`,
     repository: createRepositoryStub(options.repository),
+    historyRepository: options.historyRepository ?? {
+      add: vi.fn().mockResolvedValue(1),
+      listBySubscriptionId: vi.fn().mockResolvedValue([]),
+    },
     summaryOptions: options.summaryOptions,
   });
 }

@@ -74,8 +74,10 @@ const {
   handleUndoToastAction,
   isSubmittingSubscription,
   isSubscriptionFormOpen,
+  openConvertTrialForm,
   openEditSubscriptionForm,
   openSubscriptionForm,
+  renewSubscription,
   requestArchiveSubscription,
   requestEndSubscription,
   submitSubscription,
@@ -292,8 +294,10 @@ function retrySubscriptionsLoad() {
                 :reference-date="currentDate"
                 :subscription="subscription"
                 @archive="requestArchiveSubscription"
+                @convert-trial="openConvertTrialForm"
                 @edit="openEditSubscriptionForm"
                 @end="requestEndSubscription"
+                @renew="renewSubscription"
               />
             </div>
 

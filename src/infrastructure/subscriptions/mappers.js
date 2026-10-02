@@ -14,6 +14,7 @@ export function toSubscriptionRecord(subscription, metadata = {}) {
     startDate: normalized.startDate,
     renewalDate: normalized.renewalDate,
     trialEndDate: normalized.trialEndDate,
+    cancellationUrl: normalized.cancellationUrl,
     icon: normalized.icon,
     brandColor: normalized.brandColor,
     category: normalized.category,
