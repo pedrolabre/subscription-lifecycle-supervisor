@@ -2,6 +2,8 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { reactive } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.vue';
+import '../features/subscription-form/NewSubscriptionForm.vue';
+import '../features/backup-dialog/BackupDialog.vue';
 
 const { storeStatus, useSubscriptionsStoreMock } = vi.hoisted(() => ({
   storeStatus: {
@@ -70,6 +72,7 @@ describe('App', () => {
     );
 
     await wrapper.get('[data-test="open-subscription-form"]').trigger('click');
+    await flushPromises();
     await wrapper.get('[data-test="service-name"]').setValue('Netflix');
     await wrapper.get('[data-test="theme-toggle"]').trigger('click');
 
@@ -97,6 +100,7 @@ describe('App', () => {
     );
 
     await wrapper.get('[data-test="open-subscription-form"]').trigger('click');
+    await flushPromises();
     await wrapper.get('[data-test="service-name"]').setValue('Figma Trial');
     await wrapper.get('[data-test="locale-toggle"]').trigger('click');
 
@@ -356,6 +360,7 @@ describe('App', () => {
         status: storeStatus.EMPTY,
       }),
     );
+    await flushPromises();
     const backupButton = wrapper.get('[data-test="open-backup-dialog"]');
     expect(backupButton.text()).toBe('Backup');
 
@@ -398,6 +403,7 @@ describe('App', () => {
     const wrapper = mountApp(store);
 
     await wrapper.get('[data-test="open-subscription-form"]').trigger('click');
+    await flushPromises();
     await wrapper.get('[data-test="service-catalog-select"]').setValue('spotify');
     await wrapper.get('[data-test="start-date"]').setValue('2026-08-01');
     await wrapper.get('[data-test="price"]').setValue('29,90');
@@ -462,6 +468,7 @@ describe('App', () => {
     const wrapper = mountApp(store);
 
     await wrapper.get('[data-test="edit-subscription"]').trigger('click');
+    await flushPromises();
 
     expect(wrapper.get('#new-subscription-title').text()).toBe(
       'Editar assinatura',
@@ -540,6 +547,7 @@ describe('App', () => {
     expect(wrapper.get('[role="list"]').text()).toContain('Spotify Premium');
 
     await wrapper.get('[data-test="edit-subscription"]').trigger('click');
+    await flushPromises();
 
     expect(wrapper.get('[data-test="service-catalog-select"]').element.value).toBe(
       '',
@@ -717,6 +725,7 @@ describe('App', () => {
     const wrapper = mountApp(store);
 
     await wrapper.get('[data-test="open-subscription-form"]').trigger('click');
+    await flushPromises();
     await wrapper.get('[data-test="service-name"]').setValue('Spotify Premium');
     await wrapper.get('[data-test="start-date"]').setValue('2026-08-01');
     await wrapper.get('[data-test="price"]').setValue('29,90');

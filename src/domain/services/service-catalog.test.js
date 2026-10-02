@@ -5,10 +5,12 @@ import {
   SERVICE_CATALOG,
   SERVICE_CATEGORIES,
   createFreeformService,
+  createOfflineServiceIcon,
   findService,
   findServiceById,
   findServiceByName,
   getServiceCatalog,
+  getServiceOfflineIcon,
   normalizeServiceText,
   resolveService,
   searchServices,
@@ -108,5 +110,35 @@ describe('service catalog domain', () => {
       iconPath: SERVICE_BRAND_FALLBACK.iconPath,
       isCustom: true,
     });
+  });
+
+  it('provides offline fallback svg icons for all catalog services and custom services', () => {
+    const catalog = getServiceCatalog();
+
+    for (const service of catalog) {
+      expect(service.offlineIcon).toBeDefined();
+      expect(service.offlineIcon).toMatch(/^data:image\/svg\+xml,/);
+      expect(getServiceOfflineIcon(service.id)).toBe(service.offlineIcon);
+    }
+
+    const spotify = findServiceById('spotify');
+    expect(spotify?.offlineIcon).toContain('%231db954'); // #1db954 URL encoded
+    expect(spotify?.offlineIcon).toContain('S');
+
+    const customFallback = getServiceOfflineIcon('Servico Desconhecido', {
+      color: '#ff5500',
+      name: 'Alpha Stream',
+    });
+    expect(customFallback).toMatch(/^data:image\/svg\+xml,/);
+    expect(customFallback).toContain('%23ff5500');
+    expect(customFallback).toContain('A');
+
+    const genericFallback = getServiceOfflineIcon(null);
+    expect(genericFallback).toMatch(/^data:image\/svg\+xml,/);
+    expect(genericFallback).toContain('%2364748b');
+
+    const generated = createOfflineServiceIcon('Custom Service', '#123456');
+    expect(generated).toContain('%23123456');
+    expect(generated).toContain('C');
   });
 });

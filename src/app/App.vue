@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, defineAsyncComponent, ref } from 'vue';
 import { useSubscriptionsStore } from '../stores/subscriptions/index.js';
 import {
   AppLogo,
@@ -17,16 +17,21 @@ import {
 } from '../shared/components/index.js';
 import { useLocale } from '../shared/i18n/index.js';
 import { SubscriptionCard } from '../features/subscription-card/index.js';
-import {
-  NewSubscriptionForm,
-  SubscriptionFormDialog,
-} from '../features/subscription-form/index.js';
-import { BackupDialog } from '../features/backup-dialog/index.js';
 import { getSubscriptionKey } from './subscriptionViewUtils.js';
 import { useSubscriptionDashboard } from './useSubscriptionDashboard.js';
 import { SORT_OPTIONS } from './useSubscriptionFilters.js';
 import { useSubscriptionReferenceDate } from './useSubscriptionReferenceDate.js';
 import { useSubscriptionWorkflow } from './useSubscriptionWorkflow.js';
+
+import SubscriptionFormDialog from '../features/subscription-form/SubscriptionFormDialog.vue';
+
+const NewSubscriptionForm = defineAsyncComponent(() =>
+  import('../features/subscription-form/NewSubscriptionForm.vue'),
+);
+const BackupDialog = defineAsyncComponent(() =>
+  import('../features/backup-dialog/BackupDialog.vue'),
+);
+
 
 const { formatNumber, locale, t, tc } = useLocale();
 const productName = computed(() => t('app.productName'));
@@ -433,6 +438,7 @@ function retrySubscriptionsLoad() {
       />
 
       <BackupDialog
+        v-if="isBackupDialogOpen"
         :open="isBackupDialogOpen"
         @close="closeBackupDialog"
       />

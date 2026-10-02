@@ -276,6 +276,42 @@ const catalogItems = [
   },
 ];
 
+export function createOfflineServiceIcon(name, color) {
+  const bg = encodeURIComponent(color || '#64748b');
+  const letter = encodeURIComponent(
+    (name && typeof name === 'string' && name.trim()
+      ? name.trim().charAt(0)
+      : 'S'
+    ).toUpperCase(),
+  );
+  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' width='48' height='48'%3E%3Crect width='48' height='48' rx='10' fill='${bg}'/%3E%3Ctext x='24' y='32' text-anchor='middle' fill='%23ffffff' font-family='system-ui,-apple-system,sans-serif' font-weight='700' font-size='24'%3E${letter}%3E%3C/text%3E%3C/svg%3E`;
+}
+
+export function getServiceOfflineIcon(serviceOrId, options = {}) {
+  if (!serviceOrId && !options.name) {
+    return createOfflineServiceIcon('Servico', options.color || '#64748b');
+  }
+
+  const service =
+    typeof serviceOrId === 'string'
+      ? catalogItems.find(
+          (item) =>
+            item.id === serviceOrId.trim().toLowerCase() ||
+            item.name.toLowerCase() === serviceOrId.trim().toLowerCase(),
+        )
+      : serviceOrId;
+
+  if (service?.offlineIcon) {
+    return service.offlineIcon;
+  }
+
+  if (service?.name) {
+    return createOfflineServiceIcon(service.name, service.color);
+  }
+
+  return createOfflineServiceIcon(options.name || 'Servico', options.color);
+}
+
 export const SERVICE_CATALOG = deepFreezeCatalog(catalogItems);
 
 function deepFreezeCatalog(items) {
@@ -283,6 +319,8 @@ function deepFreezeCatalog(items) {
     items.map((item) =>
       Object.freeze({
         ...item,
+        offlineIcon:
+          item.offlineIcon ?? createOfflineServiceIcon(item.name, item.color),
         aliases: Object.freeze([...item.aliases]),
       }),
     ),

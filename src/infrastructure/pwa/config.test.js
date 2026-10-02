@@ -42,7 +42,7 @@ describe('pwa configuration', () => {
     );
   });
 
-  it('keeps service worker generation focused on the app shell', () => {
+  it('keeps service worker generation focused on the app shell with complete asset precache', () => {
     expect(pwaPluginOptions).toEqual(
       expect.objectContaining({
         registerType: 'autoUpdate',
@@ -51,15 +51,22 @@ describe('pwa configuration', () => {
         workbox: pwaWorkbox,
       }),
     );
-    expect(pwaPluginOptions.includeAssets).toEqual(['assets/logos/logo.svg']);
+    expect(pwaPluginOptions.includeAssets).toEqual([
+      'assets/logos/logo.svg',
+      'fonts/figtree/figtree-latin-400-800.woff2',
+      'fonts/figtree/figtree-latin-ext-400-800.woff2',
+    ]);
     expect(pwaWorkbox).toEqual(
       expect.objectContaining({
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
         navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/icons\//],
       }),
     );
-    expect(pwaWorkbox.globPatterns).toContain('**/*.{js,css,html}');
+    expect(pwaWorkbox.globPatterns).toEqual([
+      '**/*.{js,css,html,ico,png,svg,woff2,ttf}',
+    ]);
   });
 });

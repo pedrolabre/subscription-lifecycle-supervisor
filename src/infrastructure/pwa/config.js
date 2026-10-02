@@ -47,15 +47,19 @@ export const pwaWorkbox = {
   cleanupOutdatedCaches: true,
   clientsClaim: true,
   skipWaiting: true,
-  globPatterns: ['**/*.{js,css,html}'],
+  globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,ttf}'],
   navigateFallback: 'index.html',
-  navigateFallbackDenylist: [/^\/assets\//, /^\/icons\//],
+  navigateFallbackDenylist: [/^\/icons\//],
 };
 
 export const pwaPluginOptions = {
   registerType: 'autoUpdate',
   injectRegister: 'auto',
-  includeAssets: [pwaIconPaths.svg.slice(1)],
+  includeAssets: [
+    pwaIconPaths.svg.slice(1),
+    'fonts/figtree/figtree-latin-400-800.woff2',
+    'fonts/figtree/figtree-latin-ext-400-800.woff2',
+  ],
   manifest: pwaManifest,
   workbox: pwaWorkbox,
 };
