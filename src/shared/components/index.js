@@ -1,7 +1,10 @@
 export { default as AppLogo } from './AppLogo.vue';
 export { default as BaseButton } from './BaseButton.vue';
+export { default as CategoryChips } from './CategoryChips.vue';
 export { default as ConfirmDialog } from './ConfirmDialog.vue';
+export { default as FilterTabs } from './FilterTabs.vue';
 export { default as LocaleToggle } from './LocaleToggle.vue';
+export { default as SearchInput } from './SearchInput.vue';
 export { default as StatePanel } from './StatePanel.vue';
 export { default as StatusBadge } from './StatusBadge.vue';
 export { default as SummaryMetric } from './SummaryMetric.vue';

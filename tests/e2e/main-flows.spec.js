@@ -170,6 +170,52 @@ test('covers 1-click renewal and safe cancellation url link', async ({ page }) =
   await expect(page.locator('.subscription-card__date-value')).toHaveText('09/10/2026');
 });
 
+test('covers status tabs, real-time search with global slash shortcut and sorting', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  await createPaidSubscription(page);
+  await createTrialSubscription(page);
+
+  await expect(page.locator('[data-test="filter-tab-all"]')).toContainText('2');
+  await expect(page.locator('[data-test="filter-tab-active"]')).toContainText('1');
+  await expect(page.locator('[data-test="filter-tab-trial"]')).toContainText('1');
+
+  await page.locator('[data-test="filter-tab-active"]').click();
+  await expect(page.getByRole('listitem', { name: /Spotify/ })).toBeVisible();
+  await expect(page.getByRole('listitem', { name: /Figma/ })).toBeHidden();
+
+  await page.locator('[data-test="filter-tab-trial"]').click();
+  await expect(page.getByRole('listitem', { name: /Figma/ })).toBeVisible();
+  await expect(page.getByRole('listitem', { name: /Spotify/ })).toBeHidden();
+
+  await page.locator('[data-test="filter-tab-all"]').click();
+
+  await page.keyboard.press('/');
+  const searchInput = page.locator('[data-test="search-input"]');
+  await expect(searchInput).toBeFocused();
+  await expect(searchInput).toHaveValue('');
+
+  await searchInput.fill('spot');
+  await expect(page.getByRole('listitem', { name: /Spotify/ })).toBeVisible();
+  await expect(page.getByRole('listitem', { name: /Figma/ })).toBeHidden();
+
+  await page.locator('[data-test="clear-search-button"]').click();
+  await expect(searchInput).toHaveValue('');
+  await expect(page.getByRole('listitem', { name: /Spotify/ })).toBeVisible();
+  await expect(page.getByRole('listitem', { name: /Figma/ })).toBeVisible();
+
+  await searchInput.fill('xyz_inexistente');
+  await expect(page.getByText('Nenhum resultado encontrado')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Limpar filtros' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Limpar filtros' }).click();
+  await expect(page.getByRole('listitem', { name: /Spotify/ })).toBeVisible();
+  await expect(page.getByRole('listitem', { name: /Figma/ })).toBeVisible();
+});
+
+
 async function createPaidSubscription(page) {
   await page.getByRole('button', { name: 'Nova assinatura' }).click();
   await page.locator('[data-test="service-catalog-select"]').selectOption('spotify');

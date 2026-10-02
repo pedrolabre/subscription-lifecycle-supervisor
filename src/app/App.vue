@@ -4,8 +4,11 @@ import { useSubscriptionsStore } from '../stores/subscriptions/index.js';
 import {
   AppLogo,
   BaseButton,
+  CategoryChips,
   ConfirmDialog,
+  FilterTabs,
   LocaleToggle,
+  SearchInput,
   StatePanel,
   StatusBadge,
   SummaryMetric,
@@ -21,6 +24,7 @@ import {
 import { BackupDialog } from '../features/backup-dialog/index.js';
 import { getSubscriptionKey } from './subscriptionViewUtils.js';
 import { useSubscriptionDashboard } from './useSubscriptionDashboard.js';
+import { SORT_OPTIONS } from './useSubscriptionFilters.js';
 import { useSubscriptionReferenceDate } from './useSubscriptionReferenceDate.js';
 import { useSubscriptionWorkflow } from './useSubscriptionWorkflow.js';
 
@@ -42,12 +46,21 @@ const { currentDate } = useSubscriptionReferenceDate(subscriptionsStore, {
 });
 
 const {
+  activeTab,
+  categoryChips,
+  clearSearch,
   errorMessage,
   hasTrialAlerts,
   isEmptyState,
   isErrorState,
+  isFilteredEmpty,
   isLoadedState,
   isLoadingState,
+  resetFilters,
+  searchQuery,
+  selectedCategory,
+  sortBy,
+  statusTabs,
   storeStatusLabel,
   subscriptionCards,
   subscriptionsListLabel,
@@ -224,6 +237,61 @@ function retrySubscriptionsLoad() {
             </h2>
           </div>
 
+          <div
+            v-if="!isLoadingState && !isErrorState && !isEmptyState"
+            class="dashboard-filter-toolbar"
+          >
+            <FilterTabs
+              v-model="activeTab"
+              :aria-label="t('filters.ariaStatusTabs')"
+              :tabs="statusTabs"
+            />
+
+            <div class="dashboard-filter-controls">
+              <SearchInput
+                v-model="searchQuery"
+                :aria-label="t('filters.searchAriaLabel')"
+                :clear-label="t('filters.clearSearch')"
+                :placeholder="t('filters.searchPlaceholder')"
+                @clear="clearSearch"
+              />
+
+              <div class="sort-select-wrapper">
+                <label
+                  for="sort-select"
+                  class="sr-only"
+                >{{ t('filters.sortBy') }}</label>
+                <select
+                  id="sort-select"
+                  v-model="sortBy"
+                  class="sort-select"
+                  data-test="sort-select"
+                  :aria-label="t('filters.sortBy')"
+                >
+                  <option :value="SORT_OPTIONS.RENEWAL_ASC">
+                    {{ t('filters.sortOptions.renewalAsc') }}
+                  </option>
+                  <option :value="SORT_OPTIONS.PRICE_DESC">
+                    {{ t('filters.sortOptions.priceDesc') }}
+                  </option>
+                  <option :value="SORT_OPTIONS.PRICE_ASC">
+                    {{ t('filters.sortOptions.priceAsc') }}
+                  </option>
+                  <option :value="SORT_OPTIONS.NAME_ASC">
+                    {{ t('filters.sortOptions.nameAsc') }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <CategoryChips
+              v-if="categoryChips.length > 1"
+              v-model="selectedCategory"
+              :aria-label="t('filters.ariaCategoryRegion')"
+              :categories="categoryChips"
+            />
+          </div>
+
           <p
             v-if="subscriptionActionError"
             class="subscription-action-error"
@@ -279,6 +347,16 @@ function retrySubscriptionsLoad() {
               :eyebrow="t('states.emptyEyebrow')"
               :title="t('states.emptyTitle')"
               tone="empty"
+            />
+
+            <StatePanel
+              v-else-if="isLoadedState && isFilteredEmpty"
+              :action-label="t('filters.clearFilters')"
+              :description="t('filters.emptyDescription')"
+              :eyebrow="t('filters.emptyEyebrow')"
+              :title="t('filters.emptyTitle')"
+              tone="empty"
+              @action="resetFilters"
             />
 
             <div
@@ -530,6 +608,52 @@ h2 {
   font-weight: 700;
 }
 
+.dashboard-filter-toolbar {
+  display: grid;
+  gap: var(--space-3);
+  padding-bottom: var(--space-1);
+}
+
+.dashboard-filter-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.sort-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.sort-select {
+  min-height: var(--control-height-md);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-sm);
+  background: var(--surface-control);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.sort-select:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-control-hover);
+}
+
+.sort-select:focus {
+  border-color: var(--border-focus);
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 .subscriptions-list-shell {
   min-width: 0;
   overflow: visible;
@@ -661,6 +785,15 @@ h2 {
 }
 
 @media (max-width: 640px) {
+  .dashboard-filter-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .sort-select-wrapper,
+  .sort-select {
+    width: 100%;
+  }
+
   .summary-grid {
     grid-template-columns: 1fr;
   }

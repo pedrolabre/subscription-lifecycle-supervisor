@@ -2,7 +2,10 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import AppLogo from './AppLogo.vue';
 import BaseButton from './BaseButton.vue';
+import CategoryChips from './CategoryChips.vue';
 import ConfirmDialog from './ConfirmDialog.vue';
+import FilterTabs from './FilterTabs.vue';
+import SearchInput from './SearchInput.vue';
 import StatePanel from './StatePanel.vue';
 import StatusBadge from './StatusBadge.vue';
 import SummaryMetric from './SummaryMetric.vue';
@@ -129,5 +132,72 @@ describe('shared visual primitives', () => {
     const svg = wrapper.find('svg');
     expect(svg.exists()).toBe(true);
     expect(svg.attributes('aria-label')).toBe('Subscription Lifecycle Supervisor Logo');
+  });
+
+  it('renders FilterTabs with accessible roles, counts and handles selection', async () => {
+    const tabs = [
+      { id: 'all', label: 'Todas', count: 5 },
+      { id: 'active', label: 'Ativas', count: 3 },
+      { id: 'trial', label: 'Trials', count: 2 },
+    ];
+    const wrapper = mount(FilterTabs, {
+      props: {
+        modelValue: 'all',
+        tabs,
+      },
+    });
+
+    expect(wrapper.get('[role="tablist"]').exists()).toBe(true);
+    const tabButtons = wrapper.findAll('[role="tab"]');
+    expect(tabButtons).toHaveLength(3);
+    expect(tabButtons[0].classes()).toContain('is-active');
+    expect(tabButtons[0].attributes('aria-selected')).toBe('true');
+    expect(tabButtons[1].attributes('aria-selected')).toBe('false');
+
+    await tabButtons[1].trigger('click');
+    expect(wrapper.emitted('update:modelValue')).toEqual([['active']]);
+  });
+
+  it('renders SearchInput, emits input and clear events', async () => {
+    const wrapper = mount(SearchInput, {
+      props: {
+        modelValue: 'Netflix',
+      },
+    });
+
+    const input = wrapper.get('[data-test="search-input"]');
+    expect(input.element.value).toBe('Netflix');
+
+    const clearButton = wrapper.get('[data-test="clear-search-button"]');
+    expect(clearButton.exists()).toBe(true);
+
+    await clearButton.trigger('click');
+    expect(wrapper.emitted('update:modelValue')).toEqual([['']]);
+    expect(wrapper.emitted('clear')).toHaveLength(1);
+
+    await input.setValue('Spotify');
+    expect(wrapper.emitted('update:modelValue')).toContainEqual(['Spotify']);
+  });
+
+  it('renders CategoryChips and emits selection', async () => {
+    const categories = [
+      { id: 'all', label: 'Todas', count: 4 },
+      { id: 'streaming', label: 'Streaming', count: 2 },
+      { id: 'music', label: 'Musica', count: 2 },
+    ];
+    const wrapper = mount(CategoryChips, {
+      props: {
+        categories,
+        modelValue: 'all',
+      },
+    });
+
+    const chips = wrapper.findAll('.category-chip');
+    expect(chips).toHaveLength(3);
+    expect(chips[0].classes()).toContain('is-active');
+    expect(chips[0].attributes('aria-pressed')).toBe('true');
+
+    await chips[1].trigger('click');
+    expect(wrapper.emitted('update:modelValue')).toEqual([['streaming']]);
   });
 });

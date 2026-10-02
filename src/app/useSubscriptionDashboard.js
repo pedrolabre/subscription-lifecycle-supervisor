@@ -5,6 +5,7 @@ import {
   normalizeCount,
   normalizeSubscriptionName,
 } from './subscriptionViewUtils.js';
+import { useSubscriptionFilters } from './useSubscriptionFilters.js';
 
 const storeStatusMessageKeys = {
   [SUBSCRIPTIONS_STORE_STATUS.IDLE]: 'storeStatus.idle',
@@ -128,13 +129,33 @@ export function useSubscriptionDashboard({
     },
   ]);
 
-  const subscriptionCards = computed(() => {
+  const rawSubscriptionCards = computed(() => {
     const summaryItems = subscriptionsStore.summary?.items;
 
     return Array.isArray(summaryItems) && summaryItems.length > 0
       ? summaryItems
       : subscriptionsStore.subscriptions;
   });
+
+  const {
+    activeTab,
+    categoryChips,
+    clearSearch,
+    filteredSubscriptions,
+    hasActiveFilters,
+    isFilteredEmpty,
+    resetFilters,
+    searchQuery,
+    selectedCategory,
+    sortBy,
+    statusTabs,
+  } = useSubscriptionFilters({
+    locale,
+    subscriptions: rawSubscriptionCards,
+    t,
+  });
+
+  const subscriptionCards = filteredSubscriptions;
 
   const subscriptionsListLabel = computed(() => {
     const count = subscriptionCards.value.length;
@@ -154,12 +175,22 @@ export function useSubscriptionDashboard({
   }
 
   return {
+    activeTab,
+    categoryChips,
+    clearSearch,
     errorMessage,
+    hasActiveFilters,
     hasTrialAlerts,
     isEmptyState,
     isErrorState,
+    isFilteredEmpty,
     isLoadedState,
     isLoadingState,
+    resetFilters,
+    searchQuery,
+    selectedCategory,
+    sortBy,
+    statusTabs,
     storeStatusLabel,
     subscriptionCards,
     subscriptionsListLabel,

@@ -848,6 +848,229 @@ describe('App', () => {
       'Prime Video',
     );
   });
+
+  it('filters dashboard cards by status tab with reactive counter updates without altering summary metrics', async () => {
+    const store = createStore({
+      activeCount: 1,
+      archivedCount: 1,
+      endedCount: 0,
+      hasSubscriptions: true,
+      isLoaded: true,
+      monthlyTotal: 29.9,
+      status: storeStatus.LOADED,
+      summary: {
+        items: [
+          createSubscription({
+            id: 'sub_1',
+            price: 29.9,
+            serviceName: 'Spotify',
+            status: 'active',
+          }),
+          createSubscription({
+            id: 'sub_2',
+            price: 0,
+            serviceName: 'Figma Pro',
+            status: 'trial',
+            trialEndDate: '2026-08-20',
+          }),
+          createSubscription({
+            id: 'sub_3',
+            price: 19.9,
+            serviceName: 'Old Service',
+            status: 'archived',
+          }),
+        ],
+      },
+      trialCount: 1,
+      yearlyProjection: 358.8,
+    });
+    const wrapper = mountApp(store);
+
+    expect(wrapper.get('[data-test="filter-tab-all"]').text()).toContain('3');
+    expect(wrapper.get('[data-test="filter-tab-active"]').text()).toContain('1');
+    expect(wrapper.get('[data-test="filter-tab-trial"]').text()).toContain('1');
+    expect(wrapper.get('[data-test="filter-tab-inactive"]').text()).toContain('1');
+
+    // Click active tab
+    await wrapper.get('[data-test="filter-tab-active"]').trigger('click');
+    expect(wrapper.findAll('.subscription-card')).toHaveLength(1);
+    expect(wrapper.find('.subscription-card').text()).toContain('Spotify');
+
+    // Summary metrics still show real monthly total of 29,90
+    expect(wrapper.get('.summary-grid').text()).toContain('29,90');
+
+    // Click trial tab
+    await wrapper.get('[data-test="filter-tab-trial"]').trigger('click');
+    expect(wrapper.findAll('.subscription-card')).toHaveLength(1);
+    expect(wrapper.find('.subscription-card').text()).toContain('Figma Pro');
+
+    // Click inactive tab
+    await wrapper.get('[data-test="filter-tab-inactive"]').trigger('click');
+    expect(wrapper.findAll('.subscription-card')).toHaveLength(1);
+    expect(wrapper.find('.subscription-card').text()).toContain('Old Service');
+
+    // Return to all
+    await wrapper.get('[data-test="filter-tab-all"]').trigger('click');
+    expect(wrapper.findAll('.subscription-card')).toHaveLength(3);
+  });
+
+  it('filters dashboard cards by search query and matches catalog aliases like gpt for ChatGPT', async () => {
+    const store = createStore({
+      activeCount: 2,
+      hasSubscriptions: true,
+      isLoaded: true,
+      status: storeStatus.LOADED,
+      summary: {
+        items: [
+          createSubscription({
+            id: 'sub_1',
+            price: 120,
+            serviceName: 'OpenAI',
+            status: 'active',
+          }),
+          createSubscription({
+            id: 'sub_2',
+            price: 29.9,
+            serviceName: 'Spotify',
+            status: 'active',
+          }),
+        ],
+      },
+    });
+    const wrapper = mountApp(store);
+
+    const searchInput = wrapper.get('[data-test="search-input"]');
+    await searchInput.setValue('gpt');
+
+    expect(wrapper.findAll('.subscription-card')).toHaveLength(1);
+    expect(wrapper.find('.subscription-card').text()).toContain('OpenAI');
+
+    await searchInput.setValue('spot');
+    expect(wrapper.findAll('.subscription-card')).toHaveLength(1);
+    expect(wrapper.find('.subscription-card').text()).toContain('Spotify');
+  });
+
+  it('renders friendly empty state panel when search returns no results and clears search on button click', async () => {
+    const store = createStore({
+      activeCount: 1,
+      hasSubscriptions: true,
+      isLoaded: true,
+      status: storeStatus.LOADED,
+      summary: {
+        items: [
+          createSubscription({
+            id: 'sub_1',
+            serviceName: 'Spotify',
+            status: 'active',
+          }),
+        ],
+      },
+    });
+    const wrapper = mountApp(store);
+
+    const searchInput = wrapper.get('[data-test="search-input"]');
+    await searchInput.setValue('termo_inexistente_xyz');
+
+    expect(wrapper.findAll('.subscription-card')).toHaveLength(0);
+    expect(wrapper.text()).toContain('Nenhum resultado encontrado');
+    expect(wrapper.text()).toContain('Limpar filtros');
+
+    await wrapper.get('.state-panel__action').trigger('click');
+
+    expect(wrapper.findAll('.subscription-card')).toHaveLength(1);
+    expect(wrapper.find('.subscription-card').text()).toContain('Spotify');
+  });
+
+  it('sorts dashboard cards by highest value, lowest value and name', async () => {
+    const store = createStore({
+      activeCount: 3,
+      hasSubscriptions: true,
+      isLoaded: true,
+      status: storeStatus.LOADED,
+      summary: {
+        items: [
+          createSubscription({
+            id: 'sub_1',
+            price: 10,
+            serviceName: 'Zapier',
+            status: 'active',
+          }),
+          createSubscription({
+            id: 'sub_2',
+            price: 100,
+            serviceName: 'Adobe',
+            status: 'active',
+          }),
+          createSubscription({
+            id: 'sub_3',
+            price: 50,
+            serviceName: 'Midjourney',
+            status: 'active',
+          }),
+        ],
+      },
+    });
+    const wrapper = mountApp(store);
+
+    const sortSelect = wrapper.get('[data-test="sort-select"]');
+
+    // Sort by Highest Value (PRICE_DESC)
+    await sortSelect.setValue('price_desc');
+    let cards = wrapper.findAll('.subscription-card');
+    expect(cards[0].text()).toContain('Adobe');
+    expect(cards[1].text()).toContain('Midjourney');
+    expect(cards[2].text()).toContain('Zapier');
+
+    // Sort by Lowest Value (PRICE_ASC)
+    await sortSelect.setValue('price_asc');
+    cards = wrapper.findAll('.subscription-card');
+    expect(cards[0].text()).toContain('Zapier');
+    expect(cards[1].text()).toContain('Midjourney');
+    expect(cards[2].text()).toContain('Adobe');
+
+    // Sort by Name (NAME_ASC)
+    await sortSelect.setValue('name_asc');
+    cards = wrapper.findAll('.subscription-card');
+    expect(cards[0].text()).toContain('Adobe');
+    expect(cards[1].text()).toContain('Midjourney');
+    expect(cards[2].text()).toContain('Zapier');
+  });
+
+  it('filters dashboard cards by category chips', async () => {
+    const store = createStore({
+      activeCount: 2,
+      hasSubscriptions: true,
+      isLoaded: true,
+      status: storeStatus.LOADED,
+      summary: {
+        items: [
+          createSubscription({
+            category: 'music',
+            id: 'sub_1',
+            serviceName: 'Spotify',
+            status: 'active',
+          }),
+          createSubscription({
+            category: 'video',
+            id: 'sub_2',
+            serviceName: 'Netflix',
+            status: 'active',
+          }),
+        ],
+      },
+    });
+    const wrapper = mountApp(store);
+
+    expect(wrapper.find('[data-test="category-chip-music"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="category-chip-video"]').exists()).toBe(true);
+
+    await wrapper.get('[data-test="category-chip-music"]').trigger('click');
+    expect(wrapper.findAll('.subscription-card')).toHaveLength(1);
+    expect(wrapper.find('.subscription-card').text()).toContain('Spotify');
+
+    await wrapper.get('[data-test="category-chip-all"]').trigger('click');
+    expect(wrapper.findAll('.subscription-card')).toHaveLength(2);
+  });
 });
 
 function mountApp(store, options = {}) {
