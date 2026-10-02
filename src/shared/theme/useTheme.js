@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue';
+import { settingsRepository } from '../../infrastructure/settings/index.js';
 
 export const THEME_VALUES = Object.freeze({
   DARK: 'dark',
@@ -12,8 +13,28 @@ const theme = ref(THEME_VALUES.DARK);
 export function initializeTheme() {
   theme.value = readStoredTheme() ?? THEME_VALUES.DARK;
   applyTheme(theme.value);
+  syncThemeFromDatabase().catch(() => {});
 
   return theme.value;
+}
+
+export async function syncThemeFromDatabase() {
+  try {
+    const settings = await settingsRepository.getSettings();
+    const stored = readStoredTheme();
+
+    if (!stored && settings?.theme && settings.theme !== 'system') {
+      const dbTheme = normalizeTheme(settings.theme);
+
+      if (dbTheme && dbTheme !== theme.value) {
+        theme.value = dbTheme;
+        writeStoredTheme(dbTheme);
+        applyTheme(dbTheme);
+      }
+    }
+  } catch {
+    // Sincronização em background é best-effort
+  }
 }
 
 export function useTheme() {
@@ -24,6 +45,7 @@ export function useTheme() {
   return {
     isLightTheme,
     setTheme,
+    syncThemeFromDatabase,
     theme,
     toggleTheme,
   };
@@ -39,6 +61,8 @@ export function setTheme(value) {
   theme.value = nextTheme;
   writeStoredTheme(nextTheme);
   applyTheme(nextTheme);
+
+  settingsRepository.updateSettings({ theme: nextTheme }).catch(() => {});
 }
 
 export function toggleTheme() {

@@ -193,6 +193,7 @@ subscription-lifecycle-supervisor/
       db/
       history/
       pwa/
+      settings/
       subscriptions/
     shared/
       components/

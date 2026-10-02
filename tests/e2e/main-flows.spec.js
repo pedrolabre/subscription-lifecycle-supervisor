@@ -215,6 +215,34 @@ test('covers status tabs, real-time search with global slash shortcut and sortin
   await expect(page.getByRole('listitem', { name: /Figma/ })).toBeVisible();
 });
 
+test('calculates exact annual projection for yearly subscriptions and synchronizes preferences', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  await page.getByRole('button', { name: 'Nova assinatura' }).click();
+  await page.locator('[data-test="service-name"]').fill('Amazon Prime Anual');
+  await page.locator('[data-test="billing-cycle"]').selectOption('yearly');
+  await page.locator('[data-test="start-date"]').fill('2026-08-09');
+  await page.locator('[data-test="price"]').fill('120,00');
+  await page.locator('[data-test="renewal-date"]').fill('2027-08-09');
+  await page.getByRole('button', { name: 'Salvar assinatura' }).click();
+
+  await expect(page.getByRole('listitem', { name: /Amazon Prime Anual/ })).toBeVisible();
+  await expect(page.locator('.summary-grid')).toContainText('10,00');
+  await expect(page.locator('.summary-grid')).toContainText('120,00');
+
+  await setTheme(page, 'light');
+  await setLocale(page, 'en-US');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+  await expect(page.getByRole('listitem', { name: /Amazon Prime Anual/ })).toBeVisible();
+});
+
 
 async function createPaidSubscription(page) {
   await page.getByRole('button', { name: 'Nova assinatura' }).click();

@@ -53,7 +53,29 @@ export function calculateNormalizedMonthlyTotal(subscriptions = []) {
 }
 
 export function calculateAnnualProjection(subscriptions = []) {
-  return centsToAmount(calculateNormalizedMonthlyTotalInCents(subscriptions) * 12);
+  if (!Array.isArray(subscriptions)) {
+    return 0;
+  }
+
+  const totalCents = subscriptions.reduce((acc, sub) => {
+    if (!isRecurringPaidSubscription(sub)) {
+      return acc;
+    }
+
+    const priceInCents = toCents(sub.price);
+
+    if (sub.billingCycle === BILLING_CYCLES.YEARLY) {
+      return acc + priceInCents;
+    }
+
+    if (sub.billingCycle === BILLING_CYCLES.MONTHLY) {
+      return acc + (priceInCents * 12);
+    }
+
+    return acc;
+  }, 0);
+
+  return centsToAmount(totalCents);
 }
 
 export function calculateAnnualProjectionFromMonthlyTotal(monthlyTotal) {

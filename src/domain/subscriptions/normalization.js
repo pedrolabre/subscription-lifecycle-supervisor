@@ -1,5 +1,6 @@
-export function normalizeSubscriptionPayload(payload = {}) {
+export function normalizeSubscriptionPayload(payload = {}, options = {}) {
   const source = isRecord(payload) ? payload : {};
+  const locale = options?.locale ?? 'pt-BR';
 
   return {
     id: normalizeOptionalText(source.id),
@@ -8,7 +9,7 @@ export function normalizeSubscriptionPayload(payload = {}) {
     status: normalizeEnumText(source.status),
     type: normalizeEnumText(source.type),
     billingCycle: normalizeEnumText(source.billingCycle),
-    price: normalizeSubscriptionPrice(source.price),
+    price: normalizeSubscriptionPrice(source.price, locale),
     startDate: normalizeRequiredDate(source.startDate),
     renewalDate: normalizeOptionalDate(source.renewalDate),
     trialEndDate: normalizeOptionalDate(source.trialEndDate),
@@ -19,30 +20,32 @@ export function normalizeSubscriptionPayload(payload = {}) {
   };
 }
 
-export function normalizeSubscriptionPrice(value) {
+export function normalizeSubscriptionPrice(value, locale = 'pt-BR') {
   if (value === null || value === undefined) {
     return 0;
   }
 
-  if (typeof value === 'string') {
-    const text = value.trim();
-
-    if (!text) {
-      return 0;
-    }
-
-    return Number(normalizeDecimalText(text));
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
   }
 
-  return Number(value);
-}
+  const text = String(value).trim();
 
-function normalizeDecimalText(text) {
-  if (text.includes(',')) {
-    return text.replace(/\./g, '').replace(',', '.');
+  if (!text) {
+    return 0;
   }
 
-  return text;
+  let cleaned = text;
+
+  if (locale === 'en-US') {
+    cleaned = cleaned.replace(/,/g, '');
+  } else if (cleaned.includes(',')) {
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  }
+
+  const parsed = Number(cleaned);
+
+  return parsed;
 }
 
 export function normalizeSubscriptionDate(value) {

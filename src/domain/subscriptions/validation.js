@@ -13,8 +13,8 @@ import {
 } from './constants.js';
 import { normalizeSubscriptionPayload } from './normalization.js';
 
-export function validateSubscriptionPayload(payload) {
-  const normalized = normalizeSubscriptionPayload(payload);
+export function validateSubscriptionPayload(payload, options = {}) {
+  const normalized = normalizeSubscriptionPayload(payload, options);
   const errors = [];
 
   if (!isRecord(payload)) {
@@ -41,8 +41,8 @@ export function validateSubscriptionPayload(payload) {
   };
 }
 
-export function getSubscriptionValidationErrors(payload) {
-  return validateSubscriptionPayload(payload).errors;
+export function getSubscriptionValidationErrors(payload, options = {}) {
+  return validateSubscriptionPayload(payload, options).errors;
 }
 
 function validateServiceName(subscription, errors) {

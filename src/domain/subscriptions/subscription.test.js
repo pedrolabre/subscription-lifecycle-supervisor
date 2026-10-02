@@ -73,6 +73,21 @@ describe('subscription domain contract', () => {
     expect(normalizeSubscriptionPrice('29,90')).toBe(29.9);
     expect(normalizeSubscriptionPrice('1000')).toBe(1000);
     expect(normalizeSubscriptionPrice('29.90')).toBe(29.9);
+    expect(normalizeSubscriptionPrice('1.500,50', 'pt-BR')).toBe(1500.5);
+  });
+
+  it('normalizes price strings accurately in en-US locale without misinterpreting thousands comma', () => {
+    expect(normalizeSubscriptionPrice('1,500.50', 'en-US')).toBe(1500.5);
+    expect(normalizeSubscriptionPrice('1,250.00', 'en-US')).toBe(1250);
+    expect(normalizeSubscriptionPrice('29.90', 'en-US')).toBe(29.9);
+    expect(normalizeSubscriptionPrice(null, 'en-US')).toBe(0);
+    expect(normalizeSubscriptionPrice('', 'en-US')).toBe(0);
+
+    const payload = normalizeSubscriptionPayload(
+      { serviceName: 'GitHub Enterprise', price: '1,500.50' },
+      { locale: 'en-US' },
+    );
+    expect(payload.price).toBe(1500.5);
   });
 
   it('accepts a valid recurring paid subscription', () => {

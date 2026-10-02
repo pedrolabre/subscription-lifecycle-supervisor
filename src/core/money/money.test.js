@@ -48,7 +48,7 @@ describe('money helpers', () => {
     expect(calculateNormalizedMonthlyTotal(subscriptions)).toBe(54.89);
   });
 
-  it('projects annual cost from the normalized monthly total', () => {
+  it('projects exact annual cost from yearly and monthly subscriptions without rounding discrepancy', () => {
     const subscriptions = [
       subscription({
         price: 19.99,
@@ -61,8 +61,18 @@ describe('money helpers', () => {
     ];
 
     expect(calculateNormalizedMonthlyTotal(subscriptions)).toBe(29.99);
-    expect(calculateAnnualProjection(subscriptions)).toBe(359.88);
+    // 19.99 * 12 (239.88) + 119.99 = 359.87 exato (sem a discrepância de 359.88 gerada por 29.99 * 12)
+    expect(calculateAnnualProjection(subscriptions)).toBe(359.87);
     expect(calculateAnnualProjectionFromMonthlyTotal(29.99)).toBe(359.88);
+
+    // Assinatura anual de 100.00 resulta em exatamente 100.00 no ano (em vez de 99.96)
+    const yearlySub = [
+      subscription({
+        price: 100,
+        billingCycle: BILLING_CYCLES.YEARLY,
+      }),
+    ];
+    expect(calculateAnnualProjection(yearlySub)).toBe(100);
   });
 
   it('ignores lifetime, free, educational, ended and archived subscriptions', () => {

@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue';
+import { settingsRepository } from '../../infrastructure/settings/index.js';
 import { DEFAULT_LOCALE, LOCALE_VALUES, messages } from './messages.js';
 
 const STORAGE_KEY = 'subscription-lifecycle-supervisor:locale';
@@ -8,8 +9,28 @@ const locale = ref(DEFAULT_LOCALE);
 export function initializeLocale() {
   locale.value = readStoredLocale() ?? DEFAULT_LOCALE;
   applyLocale(locale.value);
+  syncLocaleFromDatabase().catch(() => {});
 
   return locale.value;
+}
+
+export async function syncLocaleFromDatabase() {
+  try {
+    const settings = await settingsRepository.getSettings();
+    const stored = readStoredLocale();
+
+    if (!stored && settings?.locale) {
+      const dbLocale = normalizeLocale(settings.locale);
+
+      if (dbLocale && dbLocale !== locale.value) {
+        locale.value = dbLocale;
+        writeStoredLocale(dbLocale);
+        applyLocale(dbLocale);
+      }
+    }
+  } catch {
+    // Sincronização em background é best-effort
+  }
 }
 
 export function useLocale() {
@@ -24,6 +45,7 @@ export function useLocale() {
     isEnglish,
     locale,
     setLocale,
+    syncLocaleFromDatabase,
     t,
     tc,
     toggleLocale,
@@ -41,6 +63,8 @@ export function setLocale(value) {
   locale.value = nextLocale;
   writeStoredLocale(nextLocale);
   applyLocale(nextLocale);
+
+  settingsRepository.updateSettings({ locale: nextLocale }).catch(() => {});
 }
 
 export function toggleLocale() {
