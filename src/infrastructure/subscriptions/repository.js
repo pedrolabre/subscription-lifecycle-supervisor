@@ -139,6 +139,134 @@ export function createSubscriptionsRepository(options = {}) {
     return record;
   }
 
+  async function bulkUpsert(items) {
+    if (!Array.isArray(items)) {
+      return [];
+    }
+
+    const validations = items.map((item) => {
+      const validation = validateForWrite(item);
+      const id = normalizeId(validation.value.id) || normalizeId(createId());
+
+      if (!id) {
+        throw new SubscriptionRepositoryError(
+          SUBSCRIPTION_REPOSITORY_ERROR_CODES.VALIDATION_FAILED,
+          'Assinatura local sem identificador.',
+          {
+            value: validation.value,
+            errors: [
+              {
+                field: 'id',
+                code: 'subscription_id_required',
+                message: 'Assinatura local precisa de identificador.',
+              },
+            ],
+          },
+        );
+      }
+
+      return {
+        ...validation.value,
+        id,
+        createdAt: item?.createdAt,
+      };
+    });
+
+    const timestamp = createTimestamp(now);
+    const results = [];
+
+    for (const validItem of validations) {
+      const existing = await table.get(validItem.id);
+      const createdAt =
+        existing?.createdAt ??
+        (validItem.createdAt
+          ? normalizeSubscriptionTimestamp(validItem.createdAt) || timestamp
+          : timestamp);
+
+      const baseRecord = toSubscriptionRecord(
+        validItem,
+        {
+          createdAt,
+          updatedAt: timestamp,
+        },
+      );
+
+      const nextRecord = existing ? { ...existing, ...baseRecord } : baseRecord;
+
+      await table.put(nextRecord);
+      results.push(toSubscriptionDomain(nextRecord));
+    }
+
+    return results;
+  }
+
+  async function replaceAll(items) {
+    if (!Array.isArray(items)) {
+      return [];
+    }
+
+    const validations = items.map((item) => {
+      const validation = validateForWrite(item);
+      const id = normalizeId(validation.value.id) || normalizeId(createId());
+
+      if (!id) {
+        throw new SubscriptionRepositoryError(
+          SUBSCRIPTION_REPOSITORY_ERROR_CODES.VALIDATION_FAILED,
+          'Assinatura local sem identificador.',
+          {
+            value: validation.value,
+            errors: [
+              {
+                field: 'id',
+                code: 'subscription_id_required',
+                message: 'Assinatura local precisa de identificador.',
+              },
+            ],
+          },
+        );
+      }
+
+      return {
+        ...validation.value,
+        id,
+        createdAt: item?.createdAt,
+      };
+    });
+
+    const timestamp = createTimestamp(now);
+
+    if (typeof table.clear === 'function') {
+      await table.clear();
+    } else {
+      const existing = await table.toArray();
+      for (const curr of existing) {
+        if (typeof table.delete === 'function') {
+          await table.delete(curr.id);
+        }
+      }
+    }
+
+    const results = [];
+    for (const validItem of validations) {
+      const createdAt = validItem.createdAt
+        ? normalizeSubscriptionTimestamp(validItem.createdAt) || timestamp
+        : timestamp;
+
+      const record = toSubscriptionRecord(
+        validItem,
+        {
+          createdAt,
+          updatedAt: timestamp,
+        },
+      );
+
+      await table.put(record);
+      results.push(toSubscriptionDomain(record));
+    }
+
+    return results;
+  }
+
   return Object.freeze({
     list,
     getById,
@@ -146,6 +274,8 @@ export function createSubscriptionsRepository(options = {}) {
     update,
     archive,
     end,
+    bulkUpsert,
+    replaceAll,
   });
 }
 

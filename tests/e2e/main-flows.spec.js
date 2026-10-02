@@ -138,6 +138,22 @@ test('captures dark and light layouts in Portuguese and English without mobile o
   }
 });
 
+test('opens and interacts with backup dialog', async ({ page }) => {
+  await page.goto('/');
+
+  const backupButton = page.getByRole('button', { name: 'Backup' });
+  await expect(backupButton).toBeVisible();
+  await backupButton.click();
+
+  const backupDialog = page.getByRole('dialog', { name: 'Backup e Restauracao' });
+  await expect(backupDialog).toBeVisible();
+  await expect(page.locator('[data-test="export-json-button"]')).toBeVisible();
+  await expect(page.locator('[data-test="export-csv-button"]')).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(backupDialog).toBeHidden();
+});
+
 async function createPaidSubscription(page) {
   await page.getByRole('button', { name: 'Nova assinatura' }).click();
   await page.locator('[data-test="service-catalog-select"]').selectOption('spotify');

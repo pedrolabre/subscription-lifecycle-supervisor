@@ -4,6 +4,11 @@ import {
   SUBSCRIPTION_STATUS,
   summarizeSubscriptions,
 } from '../../domain/subscriptions/index.js';
+import {
+  createBackupPayload,
+  generateSubscriptionsCsv,
+  validateBackupPayload,
+} from '../../domain/backup/index.js';
 import { subscriptionsRepository } from '../../infrastructure/subscriptions/index.js';
 
 export const SUBSCRIPTIONS_STORE_ID = 'subscriptions';
@@ -137,6 +142,43 @@ export function createSubscriptionsStore(options = {}) {
       });
     }
 
+    function exportBackup(settings = {}) {
+      return createBackupPayload(subscriptions.value, settings);
+    }
+
+    function exportCsv(options = {}) {
+      return generateSubscriptionsCsv(subscriptions.value, options);
+    }
+
+    async function importBackup(payloadOrJson, strategy = 'merge') {
+      return runMutation(async () => {
+        const validation = validateBackupPayload(payloadOrJson);
+
+        if (!validation.isValid) {
+          const error = new Error('Schema de backup inválido.');
+          error.code = 'invalid_backup_schema';
+          error.details = { errors: validation.errors };
+          throw error;
+        }
+
+        const importedSubscriptions = validation.data.subscriptions;
+
+        if (strategy === 'replace') {
+          subscriptions.value = await repository.replaceAll(importedSubscriptions);
+        } else {
+          await repository.bulkUpsert(importedSubscriptions);
+          subscriptions.value = await repository.list();
+        }
+
+        return {
+          strategy,
+          count: importedSubscriptions.length,
+          meta: validation.data.meta,
+          settings: validation.data.settings,
+        };
+      });
+    }
+
     function reload() {
       return load();
     }
@@ -205,6 +247,9 @@ export function createSubscriptionsStore(options = {}) {
       update,
       archive,
       end,
+      exportBackup,
+      exportCsv,
+      importBackup,
       reload,
       clearError,
       setReferenceDate,

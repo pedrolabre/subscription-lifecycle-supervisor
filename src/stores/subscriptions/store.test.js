@@ -502,6 +502,89 @@ describe('subscriptions store', () => {
     expect(reloadedStore.monthlyTotal).toBe(0);
     expect(reloadedStore.summary.items).toEqual(store.summary.items);
   });
+
+  it('exports backup payload and CSV matching store state', async () => {
+    const subs = [
+      subscription({ id: 'sub_spotify', serviceName: 'Spotify', price: 29.9 }),
+      subscription({ id: 'sub_prime', serviceName: 'Prime', price: 199, billingCycle: BILLING_CYCLES.YEARLY }),
+    ];
+    const useStore = createTestStore({
+      repository: {
+        list: vi.fn().mockResolvedValue(subs),
+      },
+    });
+    const store = useStore();
+    await store.load();
+
+    const backup = store.exportBackup({ theme: 'light', locale: 'en-US' });
+    expect(backup.schemaVersion).toBe('1.0.0');
+    expect(backup.app).toBe('subscription-lifecycle-supervisor');
+    expect(backup.settings.theme).toBe('light');
+    expect(backup.subscriptions).toHaveLength(2);
+
+    const csv = store.exportCsv({ locale: 'en-US' });
+    expect(csv.startsWith('\uFEFF')).toBe(true);
+    expect(csv).toContain('Spotify');
+    expect(csv).toContain('Prime');
+  });
+
+  it('imports backup with merge and replace strategies', async () => {
+    const existing = [subscription({ id: 'sub_1', serviceName: 'Current' })];
+    const importedItem = {
+      id: 'sub_imported',
+      serviceName: 'Imported Service',
+      status: 'active',
+      type: 'paid',
+      billingCycle: 'monthly',
+      price: 15.0,
+      startDate: '2026-08-01',
+      renewalDate: '2026-09-01',
+    };
+    const validPayload = {
+      app: 'subscription-lifecycle-supervisor',
+      schemaVersion: '1.0.0',
+      subscriptions: [importedItem],
+    };
+
+    let table = [...existing];
+    const repository = {
+      list: vi.fn(async () => [...table]),
+      bulkUpsert: vi.fn(async (items) => {
+        table = [...table, ...items];
+        return table;
+      }),
+      replaceAll: vi.fn(async (items) => {
+        table = [...items];
+        return table;
+      }),
+    };
+
+    const useStore = createTestStore({ repository });
+    const store = useStore();
+    await store.load();
+
+    // Strategy: merge
+    const mergeResult = await store.importBackup(validPayload, 'merge');
+    expect(mergeResult.strategy).toBe('merge');
+    expect(repository.bulkUpsert).toHaveBeenCalled();
+    expect(store.subscriptions).toHaveLength(2);
+
+    // Strategy: replace
+    const replaceResult = await store.importBackup(validPayload, 'replace');
+    expect(replaceResult.strategy).toBe('replace');
+    expect(repository.replaceAll).toHaveBeenCalled();
+    expect(store.subscriptions).toHaveLength(1);
+    expect(store.subscriptions[0].id).toBe('sub_imported');
+  });
+
+  it('rejects invalid backup schema and sets mutationError', async () => {
+    const useStore = createTestStore();
+    const store = useStore();
+
+    await expect(store.importBackup({ invalid: true })).rejects.toThrow('Schema de backup inválido.');
+    expect(store.hasError).toBe(true);
+    expect(store.mutationError.code).toBe('invalid_backup_schema');
+  });
 });
 
 function createTestStore(options = {}) {
@@ -534,6 +617,8 @@ function createRepositoryStub(overrides = {}) {
         status: SUBSCRIPTION_STATUS.ENDED,
       }),
     ),
+    bulkUpsert: vi.fn((items) => Promise.resolve(items)),
+    replaceAll: vi.fn((items) => Promise.resolve(items)),
     ...overrides,
   };
 }

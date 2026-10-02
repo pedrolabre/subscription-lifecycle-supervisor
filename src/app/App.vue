@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useSubscriptionsStore } from '../stores/subscriptions/index.js';
 import {
   AppLogo,
@@ -18,6 +18,7 @@ import {
   NewSubscriptionForm,
   SubscriptionFormDialog,
 } from '../features/subscription-form/index.js';
+import { BackupDialog } from '../features/backup-dialog/index.js';
 import { getSubscriptionKey } from './subscriptionViewUtils.js';
 import { useSubscriptionDashboard } from './useSubscriptionDashboard.js';
 import { useSubscriptionReferenceDate } from './useSubscriptionReferenceDate.js';
@@ -26,6 +27,15 @@ import { useSubscriptionWorkflow } from './useSubscriptionWorkflow.js';
 const { formatNumber, locale, t, tc } = useLocale();
 const productName = computed(() => t('app.productName'));
 const subscriptionsStore = useSubscriptionsStore();
+const isBackupDialogOpen = ref(false);
+
+function openBackupDialog() {
+  isBackupDialogOpen.value = true;
+}
+
+function closeBackupDialog() {
+  isBackupDialogOpen.value = false;
+}
 
 const { currentDate } = useSubscriptionReferenceDate(subscriptionsStore, {
   loadSubscriptions,
@@ -123,6 +133,18 @@ function retrySubscriptionsLoad() {
         >
           {{ storeStatusLabel }}
         </StatusBadge>
+        <BaseButton
+          class="app-header-backup"
+          data-test="open-backup-dialog"
+          type="button"
+          variant="secondary"
+          aria-controls="backup-dialog"
+          aria-haspopup="dialog"
+          :aria-expanded="isBackupDialogOpen"
+          @click="openBackupDialog"
+        >
+          {{ t('backup.actionButton') }}
+        </BaseButton>
         <BaseButton
           class="app-primary-action"
           data-test="open-subscription-form"
@@ -326,6 +348,11 @@ function retrySubscriptionsLoad() {
         :visible="toastState.visible"
         @action="handleUndoToastAction"
         @dismiss="dismissToast"
+      />
+
+      <BackupDialog
+        :open="isBackupDialogOpen"
+        @close="closeBackupDialog"
       />
     </main>
   </div>
@@ -617,7 +644,8 @@ h2 {
     justify-content: flex-start;
   }
 
-  .app-header-status {
+  .app-header-status,
+  .app-header-backup {
     flex: 1 1 8rem;
     justify-content: center;
   }

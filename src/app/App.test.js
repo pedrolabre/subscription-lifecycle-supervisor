@@ -348,6 +348,28 @@ describe('App', () => {
     expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
   });
 
+  it('opens and closes the backup dialog from the header', async () => {
+    const wrapper = mountApp(
+      createStore({
+        isEmpty: true,
+        isLoaded: true,
+        status: storeStatus.EMPTY,
+      }),
+    );
+    const backupButton = wrapper.get('[data-test="open-backup-dialog"]');
+    expect(backupButton.text()).toBe('Backup');
+
+    await backupButton.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('#backup-dialog').exists()).toBe(true);
+
+    await wrapper.get('[data-test="close-backup-dialog"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('#backup-dialog').exists()).toBe(false);
+  });
+
   it('creates a paid subscription through the store and refreshes the loaded view', async () => {
     const store = createStore({
       isEmpty: true,

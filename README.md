@@ -186,9 +186,11 @@ subscription-lifecycle-supervisor/
       dates/
       money/
     domain/
+      backup/
       services/
       subscriptions/
     features/
+      backup-dialog/
       subscription-card/
       subscription-form/
     infrastructure/

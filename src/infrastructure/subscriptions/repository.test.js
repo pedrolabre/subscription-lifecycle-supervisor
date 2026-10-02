@@ -221,6 +221,86 @@ describe('subscriptions repository', () => {
       },
     );
   });
+
+  it('performs bulkUpsert merging new and existing records without losing existing ones', async () => {
+    const table = createSubscriptionsTable([
+      persistedSubscription({
+        id: 'sub_1',
+        serviceName: 'Spotify Initial',
+        price: 20,
+      }),
+      persistedSubscription({
+        id: 'sub_unrelated',
+        serviceName: 'iCloud',
+        price: 9.9,
+      }),
+    ]);
+    const repository = createSubscriptionsRepository({
+      table,
+      now: () => '2026-08-04T10:00:00.000Z',
+    });
+
+    const results = await repository.bulkUpsert([
+      {
+        id: 'sub_1',
+        serviceName: 'Spotify Updated',
+        status: SUBSCRIPTION_STATUS.ACTIVE,
+        type: SUBSCRIPTION_TYPES.PAID,
+        billingCycle: BILLING_CYCLES.MONTHLY,
+        price: 29.9,
+        startDate: '2026-08-01',
+        renewalDate: '2026-09-01',
+      },
+      {
+        id: 'sub_new',
+        serviceName: 'Disney Plus',
+        status: SUBSCRIPTION_STATUS.ACTIVE,
+        type: SUBSCRIPTION_TYPES.PAID,
+        billingCycle: BILLING_CYCLES.MONTHLY,
+        price: 43.9,
+        startDate: '2026-08-01',
+        renewalDate: '2026-09-01',
+      },
+    ]);
+
+    expect(results).toHaveLength(2);
+    expect(results[0].serviceName).toBe('Spotify Updated');
+    expect(results[1].serviceName).toBe('Disney Plus');
+
+    const all = await repository.list();
+    expect(all).toHaveLength(3); // sub_1 (updated), sub_unrelated (kept), sub_new (added)
+  });
+
+  it('performs replaceAll wiping previous records and storing only the new set', async () => {
+    const table = createSubscriptionsTable([
+      persistedSubscription({ id: 'old_1', serviceName: 'Old 1' }),
+      persistedSubscription({ id: 'old_2', serviceName: 'Old 2' }),
+    ]);
+    const repository = createSubscriptionsRepository({
+      table,
+      now: () => '2026-08-04T12:00:00.000Z',
+    });
+
+    const results = await repository.replaceAll([
+      {
+        id: 'imported_1',
+        serviceName: 'Imported Netflix',
+        status: SUBSCRIPTION_STATUS.ACTIVE,
+        type: SUBSCRIPTION_TYPES.PAID,
+        billingCycle: BILLING_CYCLES.MONTHLY,
+        price: 55.9,
+        startDate: '2026-08-01',
+        renewalDate: '2026-09-01',
+      },
+    ]);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].serviceName).toBe('Imported Netflix');
+
+    const all = await repository.list();
+    expect(all).toHaveLength(1);
+    expect(all[0].id).toBe('imported_1');
+  });
 });
 
 function persistedSubscription(overrides = {}) {
@@ -277,6 +357,9 @@ function createSubscriptionsTable(initialRecords = []) {
       records.set(record.id, cloneRecord(record));
 
       return record.id;
+    },
+    async clear() {
+      records.clear();
     },
     records() {
       return [...records.values()].map(cloneRecord);

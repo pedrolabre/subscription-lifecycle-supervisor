@@ -14,6 +14,44 @@ export const messages = Object.freeze({
     aria: {
       subscriptionsListArea: 'Area da lista de assinaturas',
     },
+    backup: {
+      actionButton: 'Backup',
+      dialog: {
+        eyebrow: 'Seguranca e Portabilidade',
+        title: 'Backup e Restauracao',
+        close: 'Fechar backup',
+      },
+      export: {
+        title: 'Exportar Dados',
+        description:
+          'Baixe seus dados locais para seguranca de dados ou planilhas.',
+        downloadJson: 'Baixar Backup (JSON)',
+        downloadCsv: 'Exportar Tabela (CSV)',
+      },
+      import: {
+        title: 'Restaurar Backup',
+        description: 'Selecione um arquivo de backup JSON previamente gerado.',
+        fileSelectPrompt: 'Clique ou arraste um arquivo JSON aqui',
+        previewTitle: 'Resumo do Arquivo',
+        schemaVersion: 'Versao do schema: {version}',
+        exportedAt: 'Data de exportacao: {date}',
+        totalCount: 'Total de assinaturas: {count}',
+        monthlyTotal: 'Custo mensal: {total}',
+        strategyTitle: 'Estrategia de Restauracao:',
+        strategyMerge:
+          'Mesclar com dados existentes (adiciona novas e atualiza coincidentes)',
+        strategyReplace:
+          'Substituir tudo (apaga os dados atuais e restaura o backup)',
+        strategyReplaceWarning:
+          'Atencao: todos os registros atuais serao substituidos pelo arquivo.',
+        confirmButton: 'Restaurar Dados',
+        cancelFile: 'Escolher outro arquivo',
+        invalidTitle: 'O arquivo nao pode ser importado:',
+        successMessage:
+          'Backup restaurado com sucesso! ({count} assinaturas processadas).',
+        restoreError: 'Erro ao restaurar dados locais.',
+      },
+    },
     billingCycles: {
       lifetime: 'Vitalicio',
       monthly: 'Mensal',
@@ -261,6 +299,44 @@ export const messages = Object.freeze({
     },
     aria: {
       subscriptionsListArea: 'Subscriptions list area',
+    },
+    backup: {
+      actionButton: 'Backup',
+      dialog: {
+        eyebrow: 'Data Safety & Portability',
+        title: 'Backup & Restore',
+        close: 'Close backup',
+      },
+      export: {
+        title: 'Export Data',
+        description:
+          'Download your local data for safekeeping or spreadsheets.',
+        downloadJson: 'Download Backup (JSON)',
+        downloadCsv: 'Export Table (CSV)',
+      },
+      import: {
+        title: 'Restore Backup',
+        description: 'Select a previously generated JSON backup file.',
+        fileSelectPrompt: 'Click or drop a JSON file here',
+        previewTitle: 'File Summary',
+        schemaVersion: 'Schema version: {version}',
+        exportedAt: 'Exported at: {date}',
+        totalCount: 'Total subscriptions: {count}',
+        monthlyTotal: 'Monthly total: {total}',
+        strategyTitle: 'Restoration Strategy:',
+        strategyMerge:
+          'Merge with existing data (adds new and updates matching)',
+        strategyReplace:
+          'Replace everything (deletes current data and restores backup)',
+        strategyReplaceWarning:
+          'Caution: all current records will be replaced by the file.',
+        confirmButton: 'Restore Data',
+        cancelFile: 'Choose another file',
+        invalidTitle: 'The file could not be imported:',
+        successMessage:
+          'Backup restored successfully! ({count} subscriptions processed).',
+        restoreError: 'Error restoring local data.',
+      },
     },
     billingCycles: {
       lifetime: 'Lifetime',
