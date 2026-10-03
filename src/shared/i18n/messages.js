@@ -182,6 +182,35 @@ export const messages = Object.freeze({
       undo: 'Desfazer',
       undone: 'Arquivamento desfeito.',
     },
+    timeline: {
+      badgeInDays: 'em {days}d',
+      badgeToday: 'Hoje',
+      badgeTomorrow: 'Amanha',
+      empty: 'Nenhum vencimento nos proximos 30 dias.',
+      eyebrow: 'Linha do tempo',
+      notificationsActive: 'Alertas ativos',
+      notificationsDenied: 'Bloqueado',
+      notificationsDisable: 'Desativar alertas',
+      notificationsDisabled: 'Alertas desligados',
+      notificationsEnable: 'Ativar alertas',
+      notificationsTitle: 'Alertas locais',
+      notificationsTooltip:
+        'Notificacoes locais do navegador sobre trials e renovacoes',
+      notificationsUnsupported: 'Nao suportado',
+      title: 'Proximos 30 dias',
+      totalUpcoming: 'Total: {total}',
+      upcomingCount: {
+        one: '1 vencimento',
+        other: '{count} vencimentos',
+      },
+    },
+    notifications: {
+      renewalAlertTitle: 'Renovacao Iminente - {name}',
+      renewalAlertBody: 'A assinatura de {name} renova {time}{price}.',
+      trialAlertTitle: 'Aviso de Trial - {name}',
+      trialAlertBody:
+        'O periodo de testes de {name} expira {time}. Revise para evitar cobrancas indesejadas.',
+    },
     dialog: {
       close: 'Fechar formulario',
       createEyebrow: 'Cadastro local',
@@ -524,6 +553,35 @@ export const messages = Object.freeze({
       unarchived: 'Subscription "{name}" unarchived.',
       undo: 'Undo',
       undone: 'Archiving undone.',
+    },
+    timeline: {
+      badgeInDays: 'in {days}d',
+      badgeToday: 'Today',
+      badgeTomorrow: 'Tomorrow',
+      empty: 'No renewals due in the next 30 days.',
+      eyebrow: 'Timeline',
+      notificationsActive: 'Alerts active',
+      notificationsDenied: 'Blocked',
+      notificationsDisable: 'Disable alerts',
+      notificationsDisabled: 'Alerts disabled',
+      notificationsEnable: 'Enable alerts',
+      notificationsTitle: 'Local alerts',
+      notificationsTooltip:
+        'Local browser notifications for trials and renewals',
+      notificationsUnsupported: 'Not supported',
+      title: 'Next 30 Days',
+      totalUpcoming: 'Total: {total}',
+      upcomingCount: {
+        one: '1 upcoming renewal',
+        other: '{count} upcoming renewals',
+      },
+    },
+    notifications: {
+      renewalAlertTitle: 'Upcoming Renewal - {name}',
+      renewalAlertBody: 'Your subscription for {name} renews {time}{price}.',
+      trialAlertTitle: 'Trial Warning - {name}',
+      trialAlertBody:
+        'The trial for {name} expires {time}. Review to avoid unwanted charges.',
     },
     dialog: {
       close: 'Close form',

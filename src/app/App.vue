@@ -17,6 +17,8 @@ import {
 } from '../shared/components/index.js';
 import { useLocale } from '../shared/i18n/index.js';
 import { SubscriptionCard } from '../features/subscription-card/index.js';
+import { UpcomingRenewalsTimeline } from '../features/timeline/index.js';
+import { scheduleLocalSubscriptionAlerts } from '../infrastructure/notifications/index.js';
 import { getSubscriptionKey } from './subscriptionViewUtils.js';
 import { useSubscriptionDashboard } from './useSubscriptionDashboard.js';
 import { SORT_OPTIONS } from './useSubscriptionFilters.js';
@@ -112,12 +114,30 @@ const {
   t,
 });
 
+function triggerAlerts() {
+  scheduleLocalSubscriptionAlerts(subscriptionsStore.subscriptions, {
+    referenceDate: currentDate.value,
+  });
+}
+
 function loadSubscriptions() {
-  return subscriptionsStore.load().catch(() => undefined);
+  return subscriptionsStore
+    .load()
+    .then((result) => {
+      triggerAlerts();
+      return result;
+    })
+    .catch(() => undefined);
 }
 
 function retrySubscriptionsLoad() {
-  return subscriptionsStore.reload().catch(() => undefined);
+  return subscriptionsStore
+    .reload()
+    .then((result) => {
+      triggerAlerts();
+      return result;
+    })
+    .catch(() => undefined);
 }
 
 </script>
@@ -227,6 +247,12 @@ function retrySubscriptionsLoad() {
               </p>
             </div>
           </div>
+
+          <UpcomingRenewalsTimeline
+            v-if="!isLoadingState && !isErrorState"
+            :subscriptions="subscriptionsStore.subscriptions"
+            :reference-date="currentDate"
+          />
         </section>
 
         <section

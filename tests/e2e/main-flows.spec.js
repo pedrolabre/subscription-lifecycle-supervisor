@@ -243,6 +243,60 @@ test('calculates exact annual projection for yearly subscriptions and synchroniz
   await expect(page.getByRole('listitem', { name: /Amazon Prime Anual/ })).toBeVisible();
 });
 
+test('covers upcoming renewals timeline (30 days) and local notifications control', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    let currentPermission = 'default';
+    class MockNotification {
+      static get permission() {
+        return currentPermission;
+      }
+      static async requestPermission() {
+        currentPermission = 'granted';
+        return 'granted';
+      }
+      constructor(title, options) {
+        this.title = title;
+        this.options = options;
+      }
+    }
+    window.Notification = MockNotification;
+  });
+
+  await page.goto('/');
+
+  await page.getByRole('button', { name: 'Nova assinatura' }).click();
+  await page.locator('[data-test="service-name"]').fill('Disney Plus');
+  await page.locator('[data-test="start-date"]').fill('2026-08-09');
+  await page.locator('[data-test="price"]').fill('33,90');
+  await page.locator('[data-test="renewal-date"]').fill('2026-08-25');
+  await page.getByRole('button', { name: 'Salvar assinatura' }).click();
+
+  await createTrialSubscription(page);
+
+  const timeline = page.locator('[data-test="upcoming-timeline"]');
+  await expect(timeline).toBeVisible();
+  await expect(timeline.locator('[data-test="timeline-count"]')).toContainText('2 vencimentos');
+  await expect(timeline.locator('[data-test="timeline-total"]')).toContainText('33,90');
+
+  const timelineItems = timeline.locator('[data-test="timeline-item"]');
+  await expect(timelineItems).toHaveCount(2);
+
+  await expect(timelineItems.nth(0)).toContainText('Figma Trial');
+  await expect(timelineItems.nth(0)).toContainText('em 5d');
+
+  await expect(timelineItems.nth(1)).toContainText('Disney Plus');
+  await expect(timelineItems.nth(1)).toContainText('em 16d');
+  await expect(timelineItems.nth(1)).toContainText('33,90');
+
+  const notificationsButton = timeline.locator('[data-test="toggle-notifications-button"]');
+  await expect(notificationsButton).toBeVisible();
+  await expect(notificationsButton).toContainText('Ativar alertas');
+  await notificationsButton.click();
+  await expect(notificationsButton).toContainText('Alertas ativos');
+});
+
 
 async function createPaidSubscription(page) {
   await page.getByRole('button', { name: 'Nova assinatura' }).click();

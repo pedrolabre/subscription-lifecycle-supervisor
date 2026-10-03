@@ -189,9 +189,11 @@ subscription-lifecycle-supervisor/
       backup-dialog/
       subscription-card/
       subscription-form/
+      timeline/
     infrastructure/
       db/
       history/
+      notifications/
       pwa/
       settings/
       subscriptions/

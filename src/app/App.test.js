@@ -1080,6 +1080,37 @@ describe('App', () => {
     await wrapper.get('[data-test="category-chip-all"]').trigger('click');
     expect(wrapper.findAll('.subscription-card')).toHaveLength(2);
   });
+
+  it('renders upcoming renewals timeline and notification controls in the summary region', () => {
+    const store = createStore({
+      hasSubscriptions: true,
+      isLoaded: true,
+      status: storeStatus.LOADED,
+      subscriptions: [
+        createSubscription({
+          id: 'sub_timeline',
+          serviceName: 'Figma Pro',
+          renewalDate: '2026-08-15',
+          price: 45.0,
+        }),
+      ],
+      summary: {
+        items: [
+          createSubscription({
+            id: 'sub_timeline',
+            serviceName: 'Figma Pro',
+            renewalDate: '2026-08-15',
+            price: 45.0,
+          }),
+        ],
+      },
+    });
+    const wrapper = mountApp(store);
+
+    expect(wrapper.find('[data-test="upcoming-timeline"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="toggle-notifications-button"]').exists()).toBe(true);
+    expect(wrapper.find('.app-summary-region').text()).toContain('Proximos 30 dias');
+  });
 });
 
 function mountApp(store, options = {}) {
