@@ -475,15 +475,16 @@ function retrySubscriptionsLoad() {
 <style scoped>
 .app-shell {
   display: grid;
-  width: min(calc(100% - 20px), var(--content-width));
+  width: 100%;
   min-height: 100vh;
   grid-template-rows: auto 1fr;
-  margin: 0 auto;
-  padding-bottom: 0.875rem;
+  padding: 0 1.5rem 0.875rem;
+  box-sizing: border-box;
 }
 
 .app-header {
   display: flex;
+  width: 100%;
   min-height: 4.25rem;
   gap: 0.875rem;
   align-items: center;
@@ -556,6 +557,7 @@ h1 {
 
 .app-main {
   display: grid;
+  width: 100%;
   align-content: start;
   gap: var(--space-5);
   min-width: 0;
@@ -563,16 +565,25 @@ h1 {
 }
 
 .dashboard-grid {
-  display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
+  display: flex;
   gap: 0.875rem;
-  align-items: start;
+  align-items: flex-start;
   min-width: 0;
+  width: 100%;
 }
 
-.app-summary-region,
+.app-summary-region {
+  display: grid;
+  width: 250px;
+  max-width: 250px;
+  flex-shrink: 0;
+  min-width: 0;
+  gap: var(--space-3);
+}
+
 .app-list-region {
   display: grid;
+  flex: 1;
   min-width: 0;
   gap: var(--space-3);
 }
@@ -762,7 +773,12 @@ h2 {
 
 @media (max-width: 850px) {
   .dashboard-grid {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .app-summary-region {
+    width: 100%;
+    max-width: 100%;
   }
 
   .summary-grid {
@@ -784,7 +800,8 @@ h2 {
 
 @media (max-width: 700px) {
   .app-shell {
-    width: min(calc(100% - 24px), var(--content-width));
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 
   .app-header {
